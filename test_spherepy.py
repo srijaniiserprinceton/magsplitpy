@@ -7,8 +7,32 @@ plt.ion()
 
 import sph_transforms as spht
 
-# function to compute the 2D-gradient in theta and phi
 def compare_Ylm_gradients(vlm, wlm, ell, m, toPlot=False):
+    """
+    Function to compute the 2D-gradient in theta and phi and compare 
+    with the numerically evaluated arrays. This serves as a sanity check of 
+    what we think spherepy is computing as well as its normalizations. The tests
+    are not performed using np.testing.assert_array_almost_equal since due to 
+    the nature of numerical derivative, the values differ at the 3rd or 4th decimal
+    place but visually, we can see if the spherepy and numerically evaluated functions
+    are the same or not.
+
+    Parameters
+    ----------
+    vlm : array_like of floats
+          The array of coefficients to be multiplied with the first basis function
+          of spherepy convention (which is the convention of Jackson).
+    wlm : array_like of floats
+          The array of coefficients to be multiplied with the second basis function
+          of spherepy convention (which is the convention of Jackson).
+    ell : int
+          The spherical harmonic angular degree of the Ylm.
+    m : int 
+          The spherical harmnonic azimuthal order of Ylm.
+    toPLot: bool, optional
+          Whether or not to generate the comparative plots between spherepy and the
+          numerical estimates of gradients of Ylm for visual comparison.
+    """
     # building spherical harmonic coefficients from the following grid
     ntheta, nphi = 180, 360
     theta = np.linspace(0,np.pi,ntheta)
@@ -64,6 +88,21 @@ def compare_Ylm_gradients(vlm, wlm, ell, m, toPlot=False):
     return gYlm_vec_pattern_custom, gYlm_vec_pattern_spherepy
 
 def plot_patterns(Y1, Y2, thth, phph):
+    """
+    Plotter function to compare two scalar spherical harmonics
+    for a given meshgrid in theta and phi.
+
+    Parameters
+    ----------
+    Y1 : complex float_like
+         The complex spherical harmonic generated from spherepy.
+    Y2 : complex float_like
+         The complex spherical harmonic generated from numerical gradient evaluation of Ylm.
+    thth : array_like of floats, shape (Ntheta x Nphi)
+           The meshgrid in theta generated using np.meshgrid(theta, phi, indexing='ij').
+    phph : array_like of floats, shape (Ntheta x Nphi)
+           The meshgrid in phi generated using np.meshgrid(theta, phi, indexing='ij').
+    """
     # plotting the scalar spherical harmonic
     figr = plt.figure()
     axr = figr.add_subplot(131)
@@ -79,6 +118,20 @@ def plot_patterns(Y1, Y2, thth, phph):
     figr.colorbar(imr,ax=axr)
 
 def compare_Ylms(ell, m, toPlot=False):
+    """
+    Testing function to compare the spherepy generated scalar Ylm 
+    vs. the numerically calculated scalar Ylm from np.scipy.special.sph_harm().
+
+    Parameters
+    ----------
+    ell : int
+          The angular degree of the desired scalar spherical harmonic.
+    m :   int
+          The azimiuthal order of the desired spherical harmonic.
+    toPLot : bool, optional
+             Either True or False depending on if we also want to visualize the 
+             scalar Ylms. By default, this is set to False. 
+    """
     # building spherical harmonic coefficients from the following grid
     ntheta, nphi = 180, 360
     theta = np.linspace(0,np.pi,ntheta)
@@ -194,18 +247,18 @@ def test_Ylm_gYlm_orthonormalizations():
     
 
 if __name__ == "__main__":
-    # # spherical harmonics degree of interest
-    # ell, m = 1, 1
+    # spherical harmonics degree of interest
+    ell, m = 1, 1
 
-    # # testing the scalar spherical harmonics
-    # Y1, Y2 = compare_Ylms(ell, m, toPlot=True)
+    # testing the scalar spherical harmonics
+    Y1, Y2 = compare_Ylms(ell, m, toPlot=True)
 
-    # print('Scalar comparison done: Compared arrays element-by-element.')
+    print('Scalar comparison done: Compared arrays element-by-element.')
 
-    # # testing the vector spherical harmonics
-    # vlm, wlm = np.random.rand(2)
-    # Y1_vec = compare_Ylm_gradients(vlm, wlm, ell, m, toPlot=True)
+    # testing the vector spherical harmonics
+    vlm, wlm = np.random.rand(2)
+    Y1_vec = compare_Ylm_gradients(vlm, wlm, ell, m, toPlot=True)
 
-    # print('Vector comparison done: Visual check by plotting the different real components.')
+    print('Vector comparison done: Visual check by plotting the different real components.')
 
-    test_Ylm_gYlm_orthonormalizations()
+    # test_Ylm_gYlm_orthonormalizations()
