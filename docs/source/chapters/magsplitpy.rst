@@ -4,7 +4,7 @@
 ------------------
 
 magsplitpy
-++++++++++++++
+++++++++++
 .. automodule:: magsplitpy.mag_GSH_funcs
     :members:
     :show-inheritance:
@@ -13,10 +13,12 @@ magsplitpy
     :members:
     :show-inheritance:
 
-.. automodule:: magsplitpy.test_spherepy
+.. automodule:: magsplitpy.misc_funcs
     :members:
     :show-inheritance:
 
-.. automodule:: magsplitpy.misc_funcs
+Testing
++++++++
+.. automodule:: tests.test_spherepy
     :members:
     :show-inheritance:
