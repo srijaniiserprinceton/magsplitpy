@@ -10,7 +10,7 @@ def field2coef(B_field, ellmax=10, mmax=10):
     Function to convert a given field to its SH or VSH components.
     The returned coefs Object is of spherepy's ScalarCoefs or VectorCoefs type. Note that
     you cannot use a field with all three vector components at the same time.
-    Either provide just the radial component $B_r$ or the transverse components $(B_{\theta}, B_{\phi})$.
+    Either provide just the radial component $B_r$ or the transverse components $(B_{\\theta}, B_{\phi})$.
     
     Parameters:
     -----------
@@ -70,7 +70,7 @@ def coef2field(B_coefs, Ntheta=180, Nphi=360):
     --------
     B_pattern : ndarray of floats, shape (Ntheta x Nphi)
                 The 2D profile corresponding to either a scalar $B_r$ field or a
-                vector $(B_{}\theta), B_{\phi})$ field.
+                vector $(B_{\\theta}, B_{\phi})$ field.
     """
     # if 1D, then its regarded as Br only
     if isinstance(B_coefs, sp.ScalarCoefs):
@@ -98,9 +98,9 @@ def convert_coeffs_DT2Jackson(v_coeff_DT, w_coeff_DT):
     Parameters:
     -----------
     v_coeff_DT : complex ndarray
-                 The set of coefficients corresponding to basis function $\nabla_1 Y_{\elll m}$ in Dahlen and Tromp 1998.
+                 The set of coefficients corresponding to basis function $\\nabla_1 Y_{\elll m}$ in Dahlen and Tromp 1998.
     w_coeff_DT : complex ndarray
-                 The set of coefficients corresponding to basis function $\hat{r} \times \nabla_1 Y_{\ell m}$ in Dahlen and Tromp 1998.
+                 The set of coefficients corresponding to basis function $\hat{r} \\times \\nabla_1 Y_{\ell m}$ in Dahlen and Tromp 1998.
 
     Returns:
     --------
@@ -121,18 +121,18 @@ def convert_coeffs_Jackson2DT(v_coeff_J, w_coeff_J):
     Spherepy follows the convention of Jackson while DT98 does not.
 
     Parameters:
-    --------
+    -----------
     v_coeff_J : complex ndarray
                 The set of coefficients corresponding to basis function X in Jackson.
     w_coeff_J : complex ndarray
                 The set of coefficients corresponding to basis function Y in Jackson.
 
     Returns:
-    -----------
+    --------
     v_coeff_DT : complex ndarray
-                 The set of coefficients corresponding to basis function $\nabla_1 Y_{\elll m}$ in Dahlen and Tromp 1998.
+                 The set of coefficients corresponding to basis function $\\nabla_1 Y_{\elll m}$ in Dahlen and Tromp 1998.
     w_coeff_DT : complex ndarray
-                 The set of coefficients corresponding to basis function $\hat{r} \times \nabla_1 Y_{\ell m}$ in Dahlen and Tromp 1998.
+                 The set of coefficients corresponding to basis function $\hat{r} \\times \\nabla_1 Y_{\ell m}$ in Dahlen and Tromp 1998.
     """
     v_coeff_DT = -1 * w_coeff_J
     w_coeff_DT = -1j * v_coeff_J
@@ -245,7 +245,7 @@ def gYlm(ell, m, theta, phi):
     m : int
 
     theta : 1D array_like of floats 
-            Array contatining the 1D $\theta$ mesh.
+            Array contatining the 1D $\\theta$ mesh.
 
     phi : 1D array_like of floats
           Array contatining the 1D $\phi$ mesh.
@@ -254,10 +254,10 @@ def gYlm(ell, m, theta, phi):
     Returns:
     --------
     gYlm_theta : ndarray, shape (Ntheta x Nphi)
-                 Numerically evaluates $\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt{\ell (\ell + 1)}$.
+                 Numerically evaluates $\\frac{\partial Y_{\ell m}}{\partial \\theta} / \sqrt{\ell (\ell + 1)}$.
 
     gYlm_phi : ndarray, shape (Ntheta x Nphi)
-               Numerically evaluates $\frac{1}{\sin{\theta}}\frac{\partial Y_{\ell m}}{\partial \phi} / \sqrt{\ell (\ell + 1)}$.
+               Numerically evaluates $\\frac{1}{\sin{\\theta}}\\frac{\partial Y_{\ell m}}{\partial \phi} / \sqrt{\ell (\ell + 1)}$.
     """
     # meshgrid
     thth, phph = np.meshgrid(theta, phi, indexing='ij')
@@ -281,19 +281,16 @@ def gYlm_2DTbasis(gYlm_theta, gYlm_phi):
     Parameters:
     -----------
     gYlm_theta : 2D complex array_like, shape (Ntheta x Nphi)
-                 The $\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
-
+                 The $\\frac{\partial Y_{\ell m}}{\partial \\theta} / \sqrt(\ell (\ell+1))$ term.
     gYlm_phi : 2D complex array_like, shape (Ntheta x Nphi)
-               The $\frac{1}{\sin{\theta}}\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+               The $\\frac{1}{\sin{\\theta}}\\frac{\partial Y_{\ell m}}{\partial \\theta} / \sqrt(\ell (\ell+1))$ term.
 
     Returns:
     --------
     B1_DT : ndarray, shape (Ntheta x Nphi)
             The component corresponding to the first transverse basis function of VSH in Dahlen and Tromp 1998.
-
     B2_DT : ndarray, shape (Ntheta x Nphi)
             The component corresponding to the second transverse basis function of VSH in Dahlen and Tromp 1998.
-
     """
     B1_DT = np.array([gYlm_theta, gYlm_phi])
     B2_DT = np.array([-gYlm_phi, gYlm_theta])
@@ -308,10 +305,10 @@ def gYlm_2Jbasis(gYlm_theta, gYlm_phi):
     Parameters:
     -----------
     gYlm_theta : 2D complex array_like, shape (Ntheta x Nphi)
-                 The $\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+                 The $\\frac{\partial Y_{\ell m}}{\partial \\theta} / \sqrt(\ell (\ell+1))$ term.
 
     gYlm_phi : 2D complex array_like, shape (Ntheta x Nphi)
-               The $\frac{1}{\sin{\theta}}\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+               The $\\frac{1}{\sin{\\theta}}\\frac{\partial Y_{\ell m}}{\partial \\theta} / \sqrt(\ell (\ell+1))$ term.
 
     Returns:
     --------

@@ -1,11 +1,33 @@
 import numpy as np
-import sph_transforms as spht
-import misc_funcs as fn
+from magsplitpy import sph_transforms as spht
+from magsplitpy import misc_funcs as fn
 
 NAX = np.newaxis
 
 # extracting the GSH coefficients corresponding to a general 3D magnetic field
 def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
+    """
+    Given a 3D magnetic field B on a spherical surface with all the three vector components 
+    $(B_r, B_{\\theta}, B_{\phi})$, this function calculates the corresponding
+    GSH coefficients. 
+
+    Parameters:
+    -----------
+    B : array_like of floats, shape (Ntheta x Nphi)
+        3D magnetic field on a spherical shell with all the vector components.
+
+    nmax : int, optional
+           The maximum angular degree of GSH transform.
+
+    mmax : int, optional
+           The maximum azimuthal order of GSH transform.
+
+    Returns:
+    --------
+    B_mu_st_r : ndarray, shape (3, nmax, mmax)
+                Array of cofficients for each spherical shell. Retains
+                the same number of points in radius.
+    """
     Br, Btheta, Bphi = B[0], B[1], B[2]
     # converting the Br(r,theta,phi) field to B^0_st(r)
     B0_st_r = spht.field2coef(np.array([Br]))

@@ -5,7 +5,7 @@ import scipy.integrate as integrate
 import matplotlib.pyplot as plt
 plt.ion()
 
-import sph_transforms as spht
+from magsplitpy import sph_transforms as spht
 
 def compare_Ylm_gradients(vlm, wlm, ell, m, toPlot=False):
     """
