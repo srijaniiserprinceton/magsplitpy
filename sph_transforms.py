@@ -277,6 +277,23 @@ def gYlm_2DTbasis(gYlm_theta, gYlm_phi):
     """
     Function to return the transverse vector spherical harmonic 
     basis functions in the convention of Dahlen and Tromp 1998.
+
+    Parameters:
+    -----------
+    gYlm_theta : 2D complex array_like, shape (Ntheta x Nphi)
+                 The $\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+
+    gYlm_phi : 2D complex array_like, shape (Ntheta x Nphi)
+               The $\frac{1}{\sin{\theta}}\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+
+    Returns:
+    --------
+    B1_DT : ndarray, shape (Ntheta x Nphi)
+            The component corresponding to the first transverse basis function of VSH in Dahlen and Tromp 1998.
+
+    B2_DT : ndarray, shape (Ntheta x Nphi)
+            The component corresponding to the second transverse basis function of VSH in Dahlen and Tromp 1998.
+
     """
     B1_DT = np.array([gYlm_theta, gYlm_phi])
     B2_DT = np.array([-gYlm_phi, gYlm_theta])
@@ -287,6 +304,22 @@ def gYlm_2Jbasis(gYlm_theta, gYlm_phi):
     """
     Function to return the transverse vector spherical harmonic 
     basis functions in the convention of Jackson Electrodynamics.
+
+    Parameters:
+    -----------
+    gYlm_theta : 2D complex array_like, shape (Ntheta x Nphi)
+                 The $\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+
+    gYlm_phi : 2D complex array_like, shape (Ntheta x Nphi)
+               The $\frac{1}{\sin{\theta}}\frac{\partial Y_{\ell m}}{\partial \theta} / \sqrt(\ell (\ell+1))$ term.
+
+    Returns:
+    --------
+    B1_J : ndarray, shape (Ntheta x Nphi)
+           The component corresponding to the first transverse basis function of VSH in Jackson.
+
+    B2_J : ndarray, shape (Ntheta x Nphi)
+           The component corresponding to the second transverse basis function of VSH in Jackson.
     """
     B1_J = -1j * np.array([-gYlm_phi, gYlm_theta])
     B2_J = -1 * np.array([gYlm_theta, gYlm_phi])
