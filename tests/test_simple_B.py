@@ -108,6 +108,20 @@ def compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical_full)
     Function to test the analytical and numerical coefficients.
     We can only compare the s=1, t=0 component of the numerical coeffients
     with the analytical coefficients.
+
+    Parameters:
+    -----------
+    Bcoefs_analytical : complex ndarray, shape (3,)
+                        Array containing the coefficients for s=1, t=0 
+                        component of the simple field constructed from
+                        Das et al. 2020.
+
+    Bcoefs_numerical_full : 3 x spherepy.ScalarCoefs type
+                            Coefficients of type spherepy.ScalarCoefs for
+                            the three components of Generalized Spherical
+                            Harmonic basis. It is sliced to extract the 
+                            s=1, t=0 component to compare with
+                            Bcoefs_analytical.
     """
     # extracting the s=1,t=0 component
     Bcoefs_numerical = np.array([0,0,0], dtype='complex')
