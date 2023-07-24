@@ -22,3 +22,7 @@ Testing
 .. automodule:: tests.test_spherepy
     :members:
     :show-inheritance:
+
+.. automodule:: tests.test_simple_B
+    :members:
+    :show-inheritance:

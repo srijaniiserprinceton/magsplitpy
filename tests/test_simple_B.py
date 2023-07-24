@@ -8,6 +8,12 @@ from magsplitpy import misc_funcs
 from magsplitpy import mag_GSH_funcs
 
 class B_field_D20:
+    """
+    Class to build the coefficients for simple B-field
+    geometry from Das et al. 2020 as well as return the 
+    Generalized Spherical Harmonic coefficients corresponding
+    to these fields.
+    """
     def __init__(self, Ntheta=180, Nphi=360):
         self.Ntheta, self.Nphi = Ntheta, Nphi
         theta = np.linspace(0,np.pi,Ntheta)
@@ -18,6 +24,15 @@ class B_field_D20:
     def dipolar_B(self):
         """
         Function to return the B field and GSH components for a purely dipolar field.
+
+        Returns:
+        --------
+        B : ndarray
+            The 3D array of the three vector components of a dipolar magnetic field.
+
+        B_GSH_coefs : complex ndarray
+                      The array of coefficients for the different GSH components of the 
+                      dipolar magnetic field as proposed above Eqn.(D48) in Das et al 2020.
         """
         B = np.zeros((3, self.Ntheta, self.Nphi))
 
@@ -35,6 +50,13 @@ class B_field_D20:
     def toroidal_B(self):
         """
         Function to return the B field and GSH components for a purely toroidal field.
+
+        B : ndarray
+            The 3D array of the three vector components of a toroidal magnetic field.
+
+        B_GSH_coefs : complex ndarray
+                      The array of coefficients for the different GSH components of the 
+                      toroidal magnetic field as proposed above Eqn.(D48) in Das et al 2020.
         """
         B = np.zeros((3, self.Ntheta, self.Nphi))
 
@@ -50,7 +72,7 @@ class B_field_D20:
         return B, B_GSH_coefs.astype('complex')
 
 
-    def make_B_D20(self, field_type='dipole', alpha=1, beta=1):
+    def make_B_D20(self, field_type='dipolar', alpha=1, beta=1):
         """
         Function to make the simple fields used Das et al 2020
 
@@ -68,12 +90,12 @@ class B_field_D20:
             The 3D array of the three vector components of the magnetic field.
 
         B_GSH_coefs : complex ndarray
-                    The array of coefficients for the different GSH components of the 
-                    simple magnetic field as proposed in Eqn.(D48) of Das et al 2020.
+                      The array of coefficients for the different GSH components of the 
+                      simple magnetic field as proposed in Eqn.(D48) of Das et al 2020.
         """
 
         match field_type:
-            case 'dipole':
+            case 'dipolar':
                 B, B_GSH_coefs = self.dipolar_B()
 
             case 'toroidal':
@@ -141,7 +163,9 @@ def compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical_full)
 
 
 if __name__ == "__main__":
+    # stipulating the field type: dipole/toroidal/mixed
+    field_type = 'mixed'
     make_B_analytical = B_field_D20()
-    B_analytical, Bcoefs_analytical = make_B_analytical.make_B_D20()
+    B_analytical, Bcoefs_analytical = make_B_analytical.make_B_D20(field_type=field_type)
     Bcoefs_numerical = make_B_analytical.get_GSH_numerically(B_analytical)
     compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical)
