@@ -4,3 +4,4 @@ __pycache__/*
 *.txt
 docs/build/*
 *.egg-info
+*.h5
