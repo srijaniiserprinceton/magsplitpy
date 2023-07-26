@@ -44,13 +44,28 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
     Bm_st_r, Bp_st_r = spht.make_GSH_from_VSH(BvDT_st_r, BwDT_st_r)
 
     # creating B^{mu}_st(r) array
-    B_mu_st_r = np.array([Bm_st_r, B0_st_r, Bp_st_r])
+    B_mu_st_r = np.array([Bm_st_r._array_2d_repr(),
+                          B0_st_r._array_2d_repr(),
+                          Bp_st_r._array_2d_repr()])
 
     # returning B^0_st_r(r), 
     return B_mu_st_r
  
 # using the GSH coefficients of B to build GSH coefficients of BB
-def make_BB_GSH_from_B_GSH(B_mu_st_r, sB_max=5):
+def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
+    """
+    Returns the GSH component of Lorentz Stress from the GSH components of B-field.
+
+    Parameters:
+    -----------
+    B_mu_st_r : ndarray, shape (3, nmax, mmax, r)
+                Array of cofficients for B.
+
+    Returns:
+    --------
+    h_mu_nu_st_r : ndarray, shape (3, 3, nmax, mmax, r)
+                   Array of cofficients for BB.
+    """
     # setting up spherical harmonic quantum numbers
     mu = np.array([-1,0,1])
     nu = np.array([-1,0,1])
@@ -69,7 +84,8 @@ def make_BB_GSH_from_B_GSH(B_mu_st_r, sB_max=5):
     wig_calc = np.vectorize(fn.wig)
 
     # the array to store the h^{mu,nu}_{st} components
-    h_mu_nu_st_r = np.zeros((3, 3, sBB_max+1, 2*sBB_max+1, B_mu_st_r.shape[3]), dtype = complex)
+    h_mu_nu_st_r = np.zeros((3, 3, sBB_max+1, 2*sBB_max+1, B_mu_st_r.shape[-1]),
+                             dtype = complex)
 
     # making meshgrid to make less loops
     mumu,nunu,ss_BB,tt_BB = np.meshgrid(mu,nu,sBB_arr,tBB_arr,indexing='ij')
@@ -106,13 +122,16 @@ if __name__ == "__main__":
 
     # creating a list of spherepy objects for each slice in radius
     # this is mainly done to be efficient in memory management
-    B_mu_st_r = []
+    B_r_mu_st = []
 
     # extracting the GSH components of the generic 3D B field one radial slice at a time
     for r_ind in range(B.shape[-1]):
         print(r_ind)
-        B_mu_st_r.append(get_B_GSHcoeffs_from_B(B[:,:,:,r_ind]))
+        B_r_mu_st.append(get_B_GSHcoeffs_from_B(B[:,:,:,r_ind]))
+
+    # moving the radius dimension form the first to the very end
+    B_mu_st_r = np.moveaxis(np.asarray(B_r_mu_st), 0, -1)
 
     # getting the BB GSH components from the B GSH components
-    # h_mu_nu_st_r = make_BB_GSH_from_B_GSH(B_mu_st_r, sB_max=sB_max)
+    h_mu_nu_st_r = make_BB_GSH_from_B_GSH(B_mu_st_r, sB_max=sB_max)
     

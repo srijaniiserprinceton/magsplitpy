@@ -146,10 +146,11 @@ def compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical_full)
                             Bcoefs_analytical.
     """
     # extracting the s=1,t=0 component
+    len_t_dim = Bcoefs_numerical_full.shape[-1]
     Bcoefs_numerical = np.array([0,0,0], dtype='complex')
-    Bcoefs_numerical[0] += Bcoefs_numerical_full[0]._vec[1]
-    Bcoefs_numerical[1] += Bcoefs_numerical_full[1]._vec[1]
-    Bcoefs_numerical[2] += Bcoefs_numerical_full[2]._vec[1]
+    Bcoefs_numerical[0] += Bcoefs_numerical_full[0][1][len_t_dim//2]
+    Bcoefs_numerical[1] += Bcoefs_numerical_full[1][1][len_t_dim//2]
+    Bcoefs_numerical[2] += Bcoefs_numerical_full[2][1][len_t_dim//2]
 
     np.testing.assert_array_almost_equal(Bcoefs_analytical,
                                          Bcoefs_numerical)
