@@ -5,3 +5,4 @@ __pycache__/*
 docs/build/*
 *.egg-info
 *.h5
+.DS_Store

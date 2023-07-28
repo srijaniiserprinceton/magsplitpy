@@ -14,8 +14,11 @@ class magkerns:
 
         # loading the eigenfunctions
         # Ui, Vi = 
-        nl = fn.find_nl(n,l)
-        nl_ = fn.find_nl(n_,l_)
+        # nl = fn.find_nl(n,l)
+        # nl_ = fn.find_nl(n_,l_)
+
+        # load eigenfunctions here
+        
 
         len_m, len_m_, len_s = np.shape(self.ss_o)
 
