@@ -2,23 +2,64 @@
 
 import numpy as np
 
+from magsplitpy import misc_funcs as fn
+
 class magkerns:
-    def __init__(self, s, r):
+    def __init__(self, s, r, axis_symm=True):
         self.s = s
-        self.t = np.arange(-self.s, self.s+1)
+        # self.t = np.arange(-self.s, self.s+1)
         self.r = r
 
-    def ret_kerns(self, n, l, m, smoothen=False):
-        # since it will always be self-coupling for asteroseismology
-        n_, l_, m_ = n, l, m
+        #ss_in is s X r dim (inner)
+        self.ss_i,__ = np.meshgrid(s,self.r, indexing = 'ij')
+        self.mm_, self.mm, self.ss_o = None, None, None
 
+        # fix this 
+        self.rho = r
+        self.axis_symm = axis_symm
+
+        # the mode parameters
+        self.n, self.l, self.m = None, None, None
+        self.n_, self.l_, self.m_ = None, None, None
+
+        # eigenfunctions
+        self.Ui, self.Vi = None, None
+        self.Ui_, self.Vi_ = None, None
+
+
+    def wig_red_o(self, m1, m2, m3):
+        '''3j symbol with upper row fixed (outer)'''
+        wig_vect = np.vectorize(fn.wig,otypes=[float])
+        return wig_vect(self.l_,self.ss_o,self.l,m1,m2,m3)
+
+    def wig_red(self, m1, m2, m3):
+        '''3j symbol with upper row fixed (inner)'''
+        wig_vect = np.vectorize(fn.wig,otypes=[float])
+        return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
+
+    def ret_kerns(self, n, l, m, n_=None, l_=None, m_=None, smoothen=False):    
         # loading the eigenfunctions
         # Ui, Vi = 
         # nl = fn.find_nl(n,l)
         # nl_ = fn.find_nl(n_,l_)
 
         # load eigenfunctions here
-        
+        self.Ui = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+        self.Vi = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+
+        # for self-coupling
+        if(l_==None):
+            n_, l_, m_ = n, l, m
+            self.n, self.l, self.m = n, l, m
+            self.n_, self.l_, self.m_ = n, l, m
+            self.Ui_, self.Vi_ = self.Ui, self.Vi
+        # for cross-coupling
+        else: 
+            self.n, self.l, self.m = n, l, m
+            self.n_, self.l_, self.m_ = n_, l_, m_
+
+        # creating meshgrid for a generic field
+        self.mm_, self.mm, self.ss_o = np.meshgrid(m_, m, self.s, indexing = 'ij')            
 
         len_m, len_m_, len_s = np.shape(self.ss_o)
 
@@ -26,15 +67,15 @@ class magkerns:
         window = 45  #must be odd
         order = 3
 
-        if(nl == None or nl_ == None):
-            print("Mode not found. Exiting."); exit()
+        # if(nl == None or nl_ == None):
+        #     print("Mode not found. Exiting."); exit()
 
 
-        tstamp()
+        # tstamp()
         om = np.vectorize(fn.omega,otypes=[float])
         parity_fac = (-1)**(l+l_+self.ss_o) #parity of selected modes
         prefac = 1./(4.* np.pi) * np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
-                    / (4.* np.pi)) * self.wig_red_o(-m_,m_-m,m)
+                    / (4.* np.pi)) * self.wig_red_o(-self.mm_,self.mm_-self.mm,self.mm)
 
 
         #EIGENFUCNTION DERIVATIVES
@@ -111,7 +152,7 @@ class magkerns:
         
         # np.save('prefac.npy',prefac)
 
-        Bmm = 0.5*(((-1)**np.abs(1+m_))*prefac)[:,:,:,np.newaxis] \
+        Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
                  * (Bmm/r**2)[np.newaxis,:,:]
     
 
@@ -124,7 +165,7 @@ class magkerns:
         B0m += self.wig_red(-1,-1,2)*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
         B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
-        B0m = (0.25*((-1)**np.abs(m_))*prefac)[:,:,:,np.newaxis] \
+        B0m = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * (B0m/r**2)[np.newaxis,:,:]
 
         
@@ -137,7 +178,7 @@ class magkerns:
         B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
-        B00 = (0.5*((-1)**np.abs(m_))*prefac)[:,:,:,np.newaxis] \
+        B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * (B00/r**2)[np.newaxis,:,:]
 
         #B+- EXPRESSION
@@ -147,7 +188,7 @@ class magkerns:
         Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
 
-        Bpm = (0.25*((-1)**np.abs(m_))*prefac)[:,:,:,np.newaxis] \
+        Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * (Bpm/r**2)[np.newaxis,:,:]
 
 
@@ -166,6 +207,9 @@ class magkerns:
         nl = fn.find_nl(n,l)
         nl_ = fn.find_nl(n_,l_)
 
+        # creating meshgrid for axisymmetric field
+        self.mm, self.ss_o = np.meshgrid(m, s, indexing = 'ij')
+        
         len_m, len_s = np.shape(self.ss_o)
 
         #Savitsky golay filter for smoothening
@@ -305,3 +349,14 @@ class magkerns:
             return rho,Bmm,B0m,B00,Bpm,Bp0,Bpp
         else:
             return Bmm,B0m,B00,Bpm,Bp0,Bpp
+
+
+if __name__ == '__main__':
+    r = np.linspace(1e-3, 1, 2044)
+    s = np.array([0, 2])
+
+    # initializing the kernel class for a specific field geometry and a radial grid
+    make_kern_s = magkerns(s, r)
+
+    # calling the generic kernel computation
+    kern = make_kern_s.ret_kerns(162, 1, np.arange(-1,2))
