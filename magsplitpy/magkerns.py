@@ -49,9 +49,6 @@ class magkerns:
         Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
         Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
 
-        # normalization of eigenfunctions
-        eignorm = fn.eignorm(Ui_raw,Vi_raw,l,self.r,self.rho)
-
         self.Ui = Ui_raw
         self.Vi = Vi_raw
 
@@ -191,24 +188,33 @@ class magkerns:
 
         return Bmm,B0m,B00,Bpm,Bp0,Bpp
         
-    def ret_kerns_axis_symm(self,smoothen = False, a_coeffkerns = False):
-        n,l,m,n_,l_ = self.n, self.l, self.mm, self.n_, self.l_
-        m_ = m
-        r_start , r_end = self.r_range
-        nl = fn.find_nl(n,l)
-        nl_ = fn.find_nl(n_,l_)
+    def ret_kerns_axis_symm(self, n, l, m, n_=None, l_=None, smoothen = False, a_coeffkerns = False):
+        # load eigenfunctions here
+        Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+        Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
+
+        self.Ui = Ui_raw
+        self.Vi = Vi_raw
+
+        # for self-coupling
+        if(l_==None):
+            n_, l_, m_ = n, l, m
+            self.n, self.l, self.m = n, l, m
+            self.n_, self.l_, self.m_ = n, l, m
+            self.Ui_, self.Vi_ = self.Ui, self.Vi
+        # for cross-coupling
+        else: 
+            self.n, self.l, self.m = n, l, m
+            self.n_, self.l_, self.m_ = n_, l_, m  # note that m = m_ since axisymmetric field
 
         # creating meshgrid for axisymmetric field
-        self.mm, self.ss_o = np.meshgrid(m, s, indexing = 'ij')
+        self.mm, self.ss_o = np.meshgrid(m, self.s, indexing = 'ij')
         
         len_m, len_s = np.shape(self.ss_o)
 
         #Savitsky golay filter for smoothening
         window = 45  #must be odd
         order = 3
-
-        if(nl == None or nl_ == None):
-            print("Mode not found. Exiting."); exit()
 
         om = np.vectorize(fn.omega,otypes=[float])
         # parity of selected modes
@@ -219,7 +225,7 @@ class magkerns:
         else:
             # the 4pi cancels a 4pi from the denominator
             prefac = np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
-                    / (4.* np.pi)) * self.wig_red_o(-m,0,m)
+                    / (4.* np.pi)) * self.wig_red_o(-self.mm, np.zeros_like(self.mm), self.mm)
 
         #-------------------EIGENFUCNTION DERIVATIVES----------------------#
         # smoothing
@@ -252,6 +258,7 @@ class magkerns:
 
             dUi, dVi = np.gradient(Ui,r), np.gradient(Vi,r)
             d2Ui,d2Vi = np.gradient(dUi,r), np.gradient(dVi,r)
+            print(Ui_.shape, Vi_.shape, r.shape)
             dUi_, dVi_ = np.gradient(Ui_,r), np.gradient(Vi_,r)
             d2Ui_,d2Vi_ = np.gradient(dUi_,r), np.gradient(dVi_,r)
 
@@ -289,7 +296,7 @@ class magkerns:
         Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
         Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V   
 
-        Bmm = 0.5*(((-1)**np.abs(1+m_))*prefac)[:,:,np.newaxis] \
+        Bmm = 0.5*(((-1)**np.abs(1+self.mm))*prefac)[:,:,np.newaxis] \
                  * Bmm[np.newaxis,:,:]
 
         #B0- EXPRESSION
@@ -300,7 +307,7 @@ class magkerns:
         B0m += self.wig_red(-1,-1,2)*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
         B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
-        B0m = (0.25*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
+        B0m = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * B0m[np.newaxis,:]
         
 
@@ -310,7 +317,7 @@ class magkerns:
         B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
-        B00 = (0.5*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
+        B00 = (0.5*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * B00[np.newaxis,:]
 
         #B+- EXPRESSION
@@ -319,7 +326,7 @@ class magkerns:
         Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))*(-4.*om0*om0_*om2*om2_*V_*V)
         Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
-        Bpm = (0.25*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
+        Bpm = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * Bpm[np.newaxis,:]
 
         #constructing the other two components of the kernel
@@ -344,7 +351,7 @@ def plot_kern_diff(r, kern1, kern2, s, comp_idx):
     plt.grid()
     plt.tight_layout()
 
-def test_computed_kernels(comp_kernels, r):
+def test_computed_kernels(comp_kernels, r, isaxissymmkern=False):
     '''
     Function to compare the computed kernels for n=-162, ell=2 and
     nu_nl = 120.176 muHz. The precomputed kernels being compared against
@@ -364,29 +371,47 @@ def test_computed_kernels(comp_kernels, r):
     ref_kernels_s0 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel0_n-162_l2_nu120176.txt')[:,1:]
     ref_kernels_s2 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel2_n-162_l2_nu120176.txt')[:,1:]
 
-    # comparing individual kernel components
-    for i in range(4):
-        # testing s=2 for that kernel components
-        # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(),
-        #                                      ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max())
-    
-        # plotting the differences
-        plot_kern_diff(r, comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(), ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max(), 2, i)
+    if(isaxissymmkern):
+        # comparing individual kernel components
+        for i in range(4):
+            # testing s=2 for that kernel components
+            # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(),
+            #                                      ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max())
+        
+            # plotting the differences
+            plot_kern_diff(r, comp_kernels[i][2,1]/comp_kernels[i][2,1].max(), ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max(), 2, i)
 
-    for i in range(2,4):
-        # testing s=0 for that kernel components
-        # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(),
-        #                                      ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max())
+        for i in range(2,4):
+            # testing s=0 for that kernel components
+            # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(),
+            #                                      ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max())
 
-        # plotting the differences
-        plot_kern_diff(r, comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(), ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max(), 0, i)
+            # plotting the differences
+            plot_kern_diff(r, comp_kernels[i][2,0]/comp_kernels[i][2,0].max(), ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max(), 0, i)
+    else:
+        # comparing individual kernel components
+        for i in range(4):
+            # testing s=2 for that kernel components
+            # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(),
+            #                                      ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max())
+        
+            # plotting the differences
+            plot_kern_diff(r, comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(), ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max(), 2, i)
+
+        for i in range(2,4):
+            # testing s=0 for that kernel components
+            # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(),
+            #                                      ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max())
+
+            # plotting the differences
+            plot_kern_diff(r, comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(), ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max(), 0, i)
 
 
 
 if __name__ == '__main__':
-    r = np.loadtxt('../sample_eigenfunctions/rn-162.txt')
+    r_norm_Rstar = np.loadtxt('../sample_eigenfunctions/rn-162.txt')
     r_raw, rho_raw = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
-    rho = np.interp(r, r_raw/r_raw[-1], rho_raw)
+    rho = np.interp(r_norm_Rstar, r_raw/r_raw[-1], rho_raw)
 
     n = 162
     ell = 2
@@ -394,10 +419,12 @@ if __name__ == '__main__':
     s = np.array([0, 2])
 
     # initializing the kernel class for a specific field geometry and a radial grid
-    make_kern_s = magkerns(s, r, rho)
+    make_kern_s = magkerns(s, r_norm_Rstar, rho)
 
     # calling the generic kernel computation
     kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
+    # calling the axisymmetric field kernel computation
+    # kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1))
 
     # benchmarking the kernel computation
-    test_computed_kernels(kern, r)
+    test_computed_kernels(kern, r_norm_Rstar, isaxissymmkern=False)
