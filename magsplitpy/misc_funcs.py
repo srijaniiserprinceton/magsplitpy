@@ -144,3 +144,8 @@ def a_coeff_GSO(del_om,l,jmax):
     P_j = np.array([])
 
     return a
+
+
+# finding the normalization value of eigenfunctions
+def eignorm(U,V,ell,r,rho):
+    return np.sqrt(np.trapz(rho * (U**2 + ell*(ell+1) * V**2) * r**2, r) * 4 * np.pi)

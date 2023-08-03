@@ -1,21 +1,23 @@
 # code where the Lorentz-stress kernels are compouted from eigenfunctions
-
+import matplotlib.pyplot as plt
+plt.ion()
 import numpy as np
 
 from magsplitpy import misc_funcs as fn
 
+NAX = np.newaxis
+
 class magkerns:
-    def __init__(self, s, r, axis_symm=True):
+    def __init__(self, s, r, rho, axis_symm=True):
         self.s = s
         # self.t = np.arange(-self.s, self.s+1)
         self.r = r
+        self.rho = rho
 
         #ss_in is s X r dim (inner)
         self.ss_i,__ = np.meshgrid(s,self.r, indexing = 'ij')
         self.mm_, self.mm, self.ss_o = None, None, None
 
-        # fix this 
-        self.rho = r
         self.axis_symm = axis_symm
 
         # the mode parameters
@@ -44,8 +46,14 @@ class magkerns:
         # nl_ = fn.find_nl(n_,l_)
 
         # load eigenfunctions here
-        self.Ui = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
-        self.Vi = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+        Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+        Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
+
+        # normalization of eigenfunctions
+        eignorm = fn.eignorm(Ui_raw,Vi_raw,l,self.r,self.rho)
+
+        self.Ui = Ui_raw
+        self.Vi = Vi_raw
 
         # for self-coupling
         if(l_==None):
@@ -74,8 +82,10 @@ class magkerns:
         # tstamp()
         om = np.vectorize(fn.omega,otypes=[float])
         parity_fac = (-1)**(l+l_+self.ss_o) #parity of selected modes
-        prefac = 1./(4.* np.pi) * np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
-                    / (4.* np.pi)) * self.wig_red_o(-self.mm_,self.mm_-self.mm,self.mm)
+
+        # the 4pi cancels a 4pi from the denominator
+        prefac = np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
+                 / (4.* np.pi)) * self.wig_red_o(-self.mm_,self.mm_-self.mm,self.mm)
 
 
         #EIGENFUCNTION DERIVATIVES
@@ -177,9 +187,21 @@ class magkerns:
                 - 5.*om0**2*V*U_ + 4.*om0**2*om0_**2*V_*V + om0_**2*r*U*dV_ + om0**2*r*U_*dV + 6.*U_*U)
         B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
+        # B00 += (self.wig_red(-1,0,1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
+        #         +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
         B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * (B00/r**2)[np.newaxis,:,:]
+
+        # chi_1_00 = -2*r*U*dU + om0**2 * r*V*dU - 5 * om0**2 *V*U \
+        #             + 2*om0**2*om0**2*V*V + om0**2*r*U*dV + 3*U*U
+        # chi_1_00 *= 2
+        # chi_2_00 = (- om0 * om0) *\
+        #            (-U*V + V*V + r*V*dU - 2*r*V*dV + r*U*dV + r**2*dV*dV)
+        # t1 = 1/(2 * 1**2) * (1+parity_fac)
+        # t2 = 0.5 * self.wig_red(0,0,0) * 2 * chi_1_00
+        # t3 = self.wig_red(-1,0,1) * 2 * chi_2_00
+        # B00 = t1[:,:,:,np.newaxis]*(t2+t3)[NAX,:,:]
 
         #B+- EXPRESSION
         Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
@@ -352,11 +374,43 @@ class magkerns:
 
 
 if __name__ == '__main__':
-    r = np.linspace(1e-3, 1, 2044)
+    r = np.loadtxt('../sample_eigenfunctions/rn-162.txt')
+    r_raw, rho_raw = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
+    rho = np.interp(r, r_raw/r_raw[-1], rho_raw)
+
+    n = 162
+    ell = 2
+
     s = np.array([0, 2])
 
     # initializing the kernel class for a specific field geometry and a radial grid
-    make_kern_s = magkerns(s, r)
+    make_kern_s = magkerns(s, r, rho)
 
     # calling the generic kernel computation
-    kern = make_kern_s.ret_kerns(162, 1, np.arange(-1,2))
+    kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
+
+    # kernels from the code; extracting the m=m'=0 components for s=0,2
+    r_sq_kern_s0_magsplitpy = np.array([kern[i][2,2,0] for i in range(4)]).T
+    r_sq_kern_s2_magsplitpy = np.array([kern[i][2,2,1] for i in range(4)]).T
+
+    # comparison kernels
+    r_sq_kern_s0 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel0_n-162_l2_nu120176.txt')[:,1:]
+    r_sq_kern_s2 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel2_n-162_l2_nu120176.txt')[:,1:]
+
+    xmin, xmax = np.argmin(np.abs(r - 1e-3)), np.argmin(np.abs(r - 2e-2))
+
+    plt.figure()
+    # kern1 = np.abs(r_sq_kern_s0[xmin:xmax,2])
+    plt.semilogy(r, np.abs(r_sq_kern_s0))
+
+    plt.figure()
+    plt.semilogy(r, (r**2)[:,NAX] * np.abs(r_sq_kern_s0_magsplitpy))
+    # kern2 = np.abs((r**2)[xmin:xmax] * r_sq_kern_s0_magsplitpy[xmin:xmax,2])
+    # plt.plot(r[xmin:xmax], kern2, '--k', label='srijan')
+    # plt.legend()
+
+    plt.figure()
+    plt.semilogy(r, np.abs(r_sq_kern_s2))
+
+    plt.figure()
+    plt.semilogy(r, (r**2)[:,NAX] * np.abs(r_sq_kern_s2_magsplitpy))
