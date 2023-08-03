@@ -75,11 +75,6 @@ class magkerns:
         window = 45  #must be odd
         order = 3
 
-        # if(nl == None or nl_ == None):
-        #     print("Mode not found. Exiting."); exit()
-
-
-        # tstamp()
         om = np.vectorize(fn.omega,otypes=[float])
         parity_fac = (-1)**(l+l_+self.ss_o) #parity of selected modes
 
@@ -88,10 +83,7 @@ class magkerns:
                  / (4.* np.pi)) * self.wig_red_o(-self.mm_,self.mm_-self.mm,self.mm)
 
 
-        #EIGENFUCNTION DERIVATIVES
-
-        ##########################################################3
-        #smoothingR2 = 0.78
+        #----------------EIGENFUCNTION DERIVATIVES--------------------#
         #interpolation params
         if(smoothen == True):
             npts = 300
@@ -128,7 +120,6 @@ class magkerns:
         #################################################################3
 
         #making U,U_,V,V_,dU,dU_,dV,dV_,d2U,d2U_,d2V,d2V_ of same shape
-
         U = np.tile(Ui,(len_s,1))
         V = np.tile(Vi,(len_s,1))
         dU = np.tile(dUi,(len_s,1))
@@ -144,7 +135,6 @@ class magkerns:
         r = np.tile(r,(len_s,1))
 
         # Initializing the omegas which will be used very often. Might cut down on some computational time
-
         om0 = om(l,0)
         om0_ = om(l_,0)
         om2 = om(l,2)
@@ -159,13 +149,10 @@ class magkerns:
                 + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
         Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
         Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V                
-        
-        # np.save('prefac.npy',prefac)
 
         Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
-                 * (Bmm/r**2)[np.newaxis,:,:]
+                 * Bmm[np.newaxis,:,:]
     
-
 
         #B0- EXPRESSION
         B0m = self.wig_red(1,-1,0)*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
@@ -176,32 +163,17 @@ class magkerns:
         B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
         B0m = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * (B0m/r**2)[np.newaxis,:,:]
+                * B0m[np.newaxis,:,:]
 
-        
-#        print(np.shape(self.wig_red(-1,-0,1)))
-#        exit()
 
         #B00 EXPRESSION
         B00 = self.wig_red(0,0,0)*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
                 - 5.*om0**2*V*U_ + 4.*om0**2*om0_**2*V_*V + om0_**2*r*U*dV_ + om0**2*r*U_*dV + 6.*U_*U)
         B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
-        # B00 += (self.wig_red(-1,0,1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
-        #         +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
         B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * (B00/r**2)[np.newaxis,:,:]
-
-        # chi_1_00 = -2*r*U*dU + om0**2 * r*V*dU - 5 * om0**2 *V*U \
-        #             + 2*om0**2*om0**2*V*V + om0**2*r*U*dV + 3*U*U
-        # chi_1_00 *= 2
-        # chi_2_00 = (- om0 * om0) *\
-        #            (-U*V + V*V + r*V*dU - 2*r*V*dV + r*U*dV + r**2*dV*dV)
-        # t1 = 1/(2 * 1**2) * (1+parity_fac)
-        # t2 = 0.5 * self.wig_red(0,0,0) * 2 * chi_1_00
-        # t3 = self.wig_red(-1,0,1) * 2 * chi_2_00
-        # B00 = t1[:,:,:,np.newaxis]*(t2+t3)[NAX,:,:]
+                * B00[np.newaxis,:,:]
 
         #B+- EXPRESSION
         Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
@@ -211,10 +183,7 @@ class magkerns:
 
 
         Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * (Bpm/r**2)[np.newaxis,:,:]
-
-
-        # print(prefac.dtype,parity_fac.dtype,Bmm.dtype,B0m.dtype,B00.dtype,Bpm.dtype)
+                * Bpm[np.newaxis,:,:]
 
         #constructing the other two components of the kernel
         Bpp = parity_fac[:,:,:,np.newaxis]*Bmm
@@ -242,23 +211,20 @@ class magkerns:
             print("Mode not found. Exiting."); exit()
 
         om = np.vectorize(fn.omega,otypes=[float])
-        parity_fac = (-1)**(l+l_+self.ss_o) #parity of selected modes
+        # parity of selected modes
+        parity_fac = (-1)**(l+l_+self.ss_o) 
         if(a_coeffkerns == True):
             prefac = ((-1.)**l)/(4.* np.pi) * np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
                     / (4.* np.pi)) * self.wig_red_o(-l,0,l) / l 
         else:
-            prefac = 1./(4.* np.pi) * np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
+            # the 4pi cancels a 4pi from the denominator
+            prefac = np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
                     / (4.* np.pi)) * self.wig_red_o(-m,0,m)
 
-        #EIGENFUCNTION DERIVATIVES
-
-        ###################################################################
-        #smoothing
-
-        #interpolation params
-
+        #-------------------EIGENFUCNTION DERIVATIVES----------------------#
+        # smoothing
+        # interpolation params
         if(smoothen == True):
-
             npts = 300      #should be less than the len(r) in r.dat
             r_new = np.linspace(np.amin(self.r),np.amax(self.r),npts)
             self.ss_i,__ = np.meshgrid(self.s,r_new, indexing = 'ij')
@@ -274,12 +240,9 @@ class magkerns:
             r = r_new
             rho = rho_sm
         
-
-        ######################################################################
-        #no smoothing
+        #----------------------no smoothing------------------------------#
 
         else:
-
             r = self.r
             rho = self.rho
             Ui = self.Ui 
@@ -311,7 +274,6 @@ class magkerns:
         r = np.tile(r,(len_s,1))
 
         # Initializing the omegas which will be used very often. Might cut down on some computational time
-
         om0 = om(l,0)
         om0_ = om(l_,0)
         om2 = om(l,2)
@@ -328,7 +290,7 @@ class magkerns:
         Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V   
 
         Bmm = 0.5*(((-1)**np.abs(1+m_))*prefac)[:,:,np.newaxis] \
-                 * (Bmm/r**2)[np.newaxis,:,:]
+                 * Bmm[np.newaxis,:,:]
 
         #B0- EXPRESSION
         B0m = self.wig_red(1,-1,0)*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
@@ -339,10 +301,8 @@ class magkerns:
         B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
         B0m = (0.25*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
-                * (B0m/r**2)[np.newaxis,:]
+                * B0m[np.newaxis,:]
         
-#        print(np.shape(self.wig_red(-1,-0,1)))
-#        exit()
 
         #B00 EXPRESSION
         B00 = self.wig_red(0,0,0)*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
@@ -351,7 +311,7 @@ class magkerns:
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
         B00 = (0.5*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
-                * (B00/r**2)[np.newaxis,:]
+                * B00[np.newaxis,:]
 
         #B+- EXPRESSION
         Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
@@ -360,7 +320,7 @@ class magkerns:
         Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
         Bpm = (0.25*((-1)**np.abs(m_))*prefac)[:,:,np.newaxis] \
-                * (Bpm/r**2)[np.newaxis,:]
+                * Bpm[np.newaxis,:]
 
         #constructing the other two components of the kernel
         Bpp = parity_fac[:,:,np.newaxis]*Bmm
@@ -371,6 +331,56 @@ class magkerns:
             return rho,Bmm,B0m,B00,Bpm,Bp0,Bpp
         else:
             return Bmm,B0m,B00,Bpm,Bp0,Bpp
+
+
+def plot_kern_diff(r, kern1, kern2, s, comp_idx):
+    kern_title = np.array(['--', '0-', '00', '+-'])
+    fig_title = f'$\mathcal{{B}}_{s}^{{{kern_title[comp_idx]}}}(n=-162,\, \ell=2,\, m=0)$'
+    plt.figure()
+    plt.semilogy(r, np.abs((kern1 - kern2)/kern2), 'r')
+    # plt.semilogy(r, np.abs(kern1), 'r')
+    # plt.semilogy(r, np.abs(kern2), '--k')
+    plt.title(fig_title)
+    plt.grid()
+    plt.tight_layout()
+
+def test_computed_kernels(comp_kernels, r):
+    '''
+    Function to compare the computed kernels for n=-162, ell=2 and
+    nu_nl = 120.176 muHz. The precomputed kernels being compared against
+    was computed by Shatanik in August 2023.
+
+    Parameters:
+    -----------
+    comp_kernels : list of array_like, each array has shape (m, m_, s, r)
+                   The list of kernel arrays with components of the list being
+                   [0] Bmm, [1] B0m, [2] B00, [3] Bpm
+
+    r : array_like of floats
+        The array containing the radial grid.
+    '''
+
+    # loading the kernels from the test directory (these data files should be in Github)
+    ref_kernels_s0 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel0_n-162_l2_nu120176.txt')[:,1:]
+    ref_kernels_s2 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel2_n-162_l2_nu120176.txt')[:,1:]
+
+    # comparing individual kernel components
+    for i in range(4):
+        # testing s=2 for that kernel components
+        # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(),
+        #                                      ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max())
+    
+        # plotting the differences
+        plot_kern_diff(r, comp_kernels[i][2,2,1]/comp_kernels[i][2,2,1].max(), ref_kernels_s2[:,i]/ref_kernels_s2[:,i].max(), 2, i)
+
+    for i in range(2,4):
+        # testing s=0 for that kernel components
+        # np.testing.assert_array_almost_equal(comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(),
+        #                                      ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max())
+
+        # plotting the differences
+        plot_kern_diff(r, comp_kernels[i][2,2,0]/comp_kernels[i][2,2,0].max(), ref_kernels_s0[:,i]/ref_kernels_s0[:,i].max(), 0, i)
+
 
 
 if __name__ == '__main__':
@@ -389,28 +399,5 @@ if __name__ == '__main__':
     # calling the generic kernel computation
     kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
 
-    # kernels from the code; extracting the m=m'=0 components for s=0,2
-    r_sq_kern_s0_magsplitpy = np.array([kern[i][2,2,0] for i in range(4)]).T
-    r_sq_kern_s2_magsplitpy = np.array([kern[i][2,2,1] for i in range(4)]).T
-
-    # comparison kernels
-    r_sq_kern_s0 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel0_n-162_l2_nu120176.txt')[:,1:]
-    r_sq_kern_s2 = np.loadtxt('../sample_eigenfunctions/Srijan_kernel2_n-162_l2_nu120176.txt')[:,1:]
-
-    xmin, xmax = np.argmin(np.abs(r - 1e-3)), np.argmin(np.abs(r - 2e-2))
-
-    plt.figure()
-    # kern1 = np.abs(r_sq_kern_s0[xmin:xmax,2])
-    plt.semilogy(r, np.abs(r_sq_kern_s0))
-
-    plt.figure()
-    plt.semilogy(r, (r**2)[:,NAX] * np.abs(r_sq_kern_s0_magsplitpy))
-    # kern2 = np.abs((r**2)[xmin:xmax] * r_sq_kern_s0_magsplitpy[xmin:xmax,2])
-    # plt.plot(r[xmin:xmax], kern2, '--k', label='srijan')
-    # plt.legend()
-
-    plt.figure()
-    plt.semilogy(r, np.abs(r_sq_kern_s2))
-
-    plt.figure()
-    plt.semilogy(r, (r**2)[:,NAX] * np.abs(r_sq_kern_s2_magsplitpy))
+    # benchmarking the kernel computation
+    test_computed_kernels(kern, r)
