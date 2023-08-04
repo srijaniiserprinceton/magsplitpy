@@ -344,9 +344,9 @@ def plot_kern_diff(r, kern1, kern2, s, comp_idx):
     kern_title = np.array(['--', '0-', '00', '+-'])
     fig_title = f'$\mathcal{{B}}_{s}^{{{kern_title[comp_idx]}}}(n=-162,\, \ell=2,\, m=0)$'
     plt.figure()
-    plt.semilogy(r, np.abs((kern1 - kern2)/kern2), 'r')
-    # plt.semilogy(r, np.abs(kern1), 'r')
-    # plt.semilogy(r, np.abs(kern2), '--k')
+    # plt.semilogy(r, np.abs((kern1 - kern2)/kern2), 'r')
+    plt.semilogy(r, np.abs(kern1), 'r')
+    plt.semilogy(r, np.abs(kern2), '--k')
     plt.title(fig_title)
     plt.grid()
     plt.tight_layout()
@@ -422,9 +422,9 @@ if __name__ == '__main__':
     make_kern_s = magkerns(s, r_norm_Rstar, rho)
 
     # calling the generic kernel computation
-    kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
+    # kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
     # calling the axisymmetric field kernel computation
-    # kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1))
+    kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1))
 
     # benchmarking the kernel computation
-    test_computed_kernels(kern, r_norm_Rstar, isaxissymmkern=False)
+    test_computed_kernels(kern, r_norm_Rstar, isaxissymmkern=True)
