@@ -8,7 +8,25 @@ from magsplitpy import misc_funcs as fn
 NAX = np.newaxis
 
 class magkerns:
+    '''
+    Class to generate the Lorentz-stress kernels according to Das et al 2020.
+    '''
     def __init__(self, s, r, rho, axis_symm=True):
+        '''
+        The class is defined according to the field topology (denoted by s) and the radius and density grids.
+
+        Parameters:
+        -----------
+        s : int
+            The angular degree of the Lorentz-stress field we are interested in. 
+        r : int
+            The radius grid on which we want to compute the kernels. Same as the grid on which we have the eigenfunctions.
+        rho : int
+              The density grid on the same grid as radius. Is not directly useful for Lorentz-stress kernels. Only useful when
+              normalizing the eigenfunctions.
+        axis_symm : bool, optional
+                    By default we assume that the field is axisymmetric about the chosen coordinate axis.
+        '''
         self.s = s
         # self.t = np.arange(-self.s, self.s+1)
         self.r = r
@@ -40,10 +58,48 @@ class magkerns:
         return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
 
     def ret_kerns(self, n, l, m, n_=None, l_=None, m_=None, smoothen=False):    
-        # loading the eigenfunctions
-        # Ui, Vi = 
-        # nl = fn.find_nl(n,l)
-        # nl_ = fn.find_nl(n_,l_)
+        '''
+        Function to return kernels for general configuration fields in a star computed from 
+        eigenfunctions using expressions (C31) - (C44) of Das et al 2020.
+
+        Parameters:
+        -----------
+        n : int
+            Radial order of the first multiplet.
+        l : int
+            Angular degree of the first multiplet.
+        m : array_like of int
+            Array of azimuthal orders of the first multiplet. Usually (-2l+1, ..., 0, ... 2l+1)
+        n_ : int, optional
+            Radial order of the second multiplet. By default, we consider self coupling. So, n_ = n if n_ is not specified.
+        l_ : int, optional
+            Angular degree of the second multiplet. By default, we consider self coupling. So, l_ = l if l_ is not specified.
+        m_ : array_like of int, optional
+            Array of azimuthal orders of the second multiplet. By default, we consider self coupling. So, m_ = m if l_ is not specified.
+            Note that although we would set m = m_ for self-coupling case (meaning we are interested in the same set of modes of the 
+            coupled multiplet), the result would have a meshgrid in m x m_ and not just m = m_ case (which is for axisymmetric case). For
+            a purely axisymmetric field, we have a different function called ret_kerns_axis_symm().
+        smoothen : If we need to smoothen the eigenfunctions to avoid unreasonably large values from spurious jumps in the eigenfunctions 
+                   obtained from the GYRE or other oscillation codes.
+
+        Returns:
+        --------
+        Bmm : array_like, shape (m x m_ x s x r) 
+              The -- component of the Lorentz stress sensitivity kernels.
+        B0m : array_like, shape (m x m_ x s x r) 
+              The 0- component of the Lorentz stress sensitivity kernels.
+        B00 : array_like, shape (m x m_ x s x r) 
+              The 00 component of the Lorentz stress sensitivity kernels.
+        Bpm : array_like, shape (m x m_ x s x r) 
+              The +- component of the Lorentz stress sensitivity kernels.
+        Bp0 : array_like, shape (m x m_ x s x r) 
+              The +0 component of the Lorentz stress sensitivity kernels.
+        Bpp : array_like, shape (m x m_ x s x r) 
+              The ++ component of the Lorentz stress sensitivity kernels.
+
+        In later versions of the code, returning Bp0 and Bpp should be deprecated since these can be generated from 
+        B0m and Bmm using parity factors, respectively.
+        '''
 
         # load eigenfunctions here
         Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
@@ -189,6 +245,44 @@ class magkerns:
         return Bmm,B0m,B00,Bpm,Bp0,Bpp
         
     def ret_kerns_axis_symm(self, n, l, m, n_=None, l_=None, smoothen = False, a_coeffkerns = False):
+        '''
+        Function to return kernels for axisymmetric fields in a star computed from 
+        eigenfunctions using expressions (C31) - (C44) of Das et al 2020.
+
+        Parameters:
+        -----------
+        n : int
+            Radial order of the first multiplet.
+        l : int
+            Angular degree of the first multiplet.
+        m : array_like of int
+            Array of azimuthal orders of the first multiplet. Usually (-2l+1, ..., 0, ... 2l+1)
+        n_ : int, optional
+            Radial order of the second multiplet. By default, we consider self coupling. So, n_ = n if n_ is not specified.
+        l_ : int, optional
+            Angular degree of the second multiplet. By default, we consider self coupling. So, l_ = l if l_ is not specified.
+        smoothen : If we need to smoothen the eigenfunctions to avoid unreasonably large values from spurious jumps in the eigenfunctions 
+                   obtained from the GYRE or other oscillation codes.
+        a_coeffkerns : Modified kernels when using a-coefficients instead of frequency splittings. See Eqn (33) in Das et al 2020.
+
+        Returns:
+        --------
+        Bmm : array_like, shape (m x s x r) 
+              The -- component of the Lorentz stress sensitivity kernels.
+        B0m : array_like, shape (m x s x r) 
+              The 0- component of the Lorentz stress sensitivity kernels.
+        B00 : array_like, shape (m x s x r) 
+              The 00 component of the Lorentz stress sensitivity kernels.
+        Bpm : array_like, shape (m x s x r) 
+              The +- component of the Lorentz stress sensitivity kernels.
+        Bp0 : array_like, shape (m x s x r) 
+              The +0 component of the Lorentz stress sensitivity kernels.
+        Bpp : array_like, shape (m x s x r) 
+              The ++ component of the Lorentz stress sensitivity kernels.
+
+        In later versions of the code, returning Bp0 and Bpp should be deprecated since these can be generated from 
+        B0m and Bmm using parity factors, respectively.
+        '''
         # load eigenfunctions here
         Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
         Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
@@ -341,6 +435,25 @@ class magkerns:
 
 
 def plot_kern_diff(r, kern1, kern2, s, comp_idx):
+    '''
+    Function to compare the different components of two kernels (possibly computed from
+    two different sources). Mostly used for visual benchmarking of kernel computation. No 
+    m index mentioned since as of now we pass kernels for m=0 only.
+
+    Parameters:
+    -----------
+    r : array_like
+        Radial grid to plot the kernel (grid on which the kernel has been processed).
+    kern1 : array_like, shape (r,)
+            First kernel.
+    kern2 : array_like, shape (r,)
+            Second kernel.
+    s : int
+        The angular degree of perturbation for which the kernels are passed.
+    comp_idx : int
+               The component demarcating the index of the geometry of magnetic field 
+               for which the kernels are passed. 0 = --, 1 = 0-, 2 = 00, 3 = +- 
+    '''
     kern_title = np.array(['--', '0-', '00', '+-'])
     fig_title = f'$\mathcal{{B}}_{s}^{{{kern_title[comp_idx]}}}(n=-162,\, \ell=2,\, m=0)$'
     plt.figure()

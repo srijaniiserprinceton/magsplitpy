@@ -6,3 +6,4 @@ docs/build/*
 *.egg-info
 *.h5
 .DS_Store
+Vincent_Eig
