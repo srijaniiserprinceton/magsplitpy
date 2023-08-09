@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 plt.ion()
 import numpy as np
+import h5py
 
 from magsplitpy import misc_funcs as fn
 
@@ -11,7 +12,7 @@ class magkerns:
     '''
     Class to generate the Lorentz-stress kernels according to Das et al 2020.
     '''
-    def __init__(self, s, r, rho, axis_symm=True):
+    def __init__(self, s, r, axis_symm=True):
         '''
         The class is defined according to the field topology (denoted by s) and the radius and density grids.
 
@@ -21,16 +22,12 @@ class magkerns:
             The angular degree of the Lorentz-stress field we are interested in. 
         r : int
             The radius grid on which we want to compute the kernels. Same as the grid on which we have the eigenfunctions.
-        rho : int
-              The density grid on the same grid as radius. Is not directly useful for Lorentz-stress kernels. Only useful when
-              normalizing the eigenfunctions.
         axis_symm : bool, optional
                     By default we assume that the field is axisymmetric about the chosen coordinate axis.
         '''
         self.s = s
         # self.t = np.arange(-self.s, self.s+1)
         self.r = r
-        self.rho = rho
 
         #ss_in is s X r dim (inner)
         self.ss_i,__ = np.meshgrid(s,self.r, indexing = 'ij')
@@ -57,7 +54,7 @@ class magkerns:
         wig_vect = np.vectorize(fn.wig,otypes=[float])
         return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
 
-    def ret_kerns(self, n, l, m, n_=None, l_=None, m_=None, smoothen=False):    
+    def ret_kerns(self, n, l, m, Ui, Vi, n_=None, l_=None, m_=None, Ui_=None, Vi_=None, smoothen=False):    
         '''
         Function to return kernels for general configuration fields in a star computed from 
         eigenfunctions using expressions (C31) - (C44) of Das et al 2020.
@@ -102,11 +99,10 @@ class magkerns:
         '''
 
         # load eigenfunctions here
-        Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
-        Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
+        
 
-        self.Ui = Ui_raw
-        self.Vi = Vi_raw
+        self.Ui = Ui
+        self.Vi = Vi
 
         # for self-coupling
         if(l_==None):
@@ -149,17 +145,14 @@ class magkerns:
             Ui_,dUi_,d2Ui_ = fn.smooth(self.Ui_,self.r,window,order,npts)
             Vi_,dVi_,d2Vi_ = fn.smooth(self.Vi_,self.r,window,order,npts)
 
-            rho_sm, __, __ = fn.smooth(self.rho,self.r,window,order,npts)
             #re-assigning with smoothened variables
             r = r_new
-            rho = rho_sm
 
         
         ###############################################################
         #no smoothing
         else: 
             r = self.r
-            rho = self.rho
             Ui = self.Ui 
             Vi = self.Vi 
             Ui_ = self.Ui_ 
@@ -244,7 +237,7 @@ class magkerns:
 
         return Bmm,B0m,B00,Bpm,Bp0,Bpp
         
-    def ret_kerns_axis_symm(self, n, l, m, n_=None, l_=None, smoothen = False, a_coeffkerns = False):
+    def ret_kerns_axis_symm(self, n, l, m, Ui, Vi, n_=None, l_=None, m_=None, Ui_=None, Vi_=None, smoothen = False, a_coeffkerns = False):
         '''
         Function to return kernels for axisymmetric fields in a star computed from 
         eigenfunctions using expressions (C31) - (C44) of Das et al 2020.
@@ -283,12 +276,9 @@ class magkerns:
         In later versions of the code, returning Bp0 and Bpp should be deprecated since these can be generated from 
         B0m and Bmm using parity factors, respectively.
         '''
-        # load eigenfunctions here
-        Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
-        Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
 
-        self.Ui = Ui_raw
-        self.Vi = Vi_raw
+        self.Ui = Ui
+        self.Vi = Vi
 
         # for self-coupling
         if(l_==None):
@@ -335,16 +325,13 @@ class magkerns:
             Ui_,dUi_,d2Ui_ = fn.smooth(self.Ui_,self.r,window,order,npts)
             Vi_,dVi_,d2Vi_ = fn.smooth(self.Vi_,self.r,window,order,npts)
 
-            rho_sm, __, __ = fn.smooth(self.rho,self.r,window,order,npts)
             #re-assigning with smoothened variables
             r = r_new
-            rho = rho_sm
         
         #----------------------no smoothing------------------------------#
 
         else:
             r = self.r
-            rho = self.rho
             Ui = self.Ui 
             Vi = self.Vi 
             Ui_ = self.Ui_ 
@@ -352,7 +339,6 @@ class magkerns:
 
             dUi, dVi = np.gradient(Ui,r), np.gradient(Vi,r)
             d2Ui,d2Vi = np.gradient(dUi,r), np.gradient(dVi,r)
-            print(Ui_.shape, Vi_.shape, r.shape)
             dUi_, dVi_ = np.gradient(Ui_,r), np.gradient(Vi_,r)
             d2Ui_,d2Vi_ = np.gradient(dUi_,r), np.gradient(dVi_,r)
 
@@ -428,11 +414,45 @@ class magkerns:
         Bp0 = parity_fac[:,:,np.newaxis]*B0m
 
 
-        if(a_coeffkerns == True): 
-            return rho,Bmm,B0m,B00,Bpm,Bp0,Bpp
-        else:
-            return Bmm,B0m,B00,Bpm,Bp0,Bpp
+        return Bmm,B0m,B00,Bpm,Bp0,Bpp
 
+def plot_kern_components(r, kern, n, ell):
+    fig, ax = plt.subplots(2, 2, sharex=True, sharey=True, figsize=(16,10))
+
+    kernel_components = np.array(['--','0-','00','+-'])
+
+    mag_comp = np.array(['$B_{\\theta}\,B_{\phi}$ or $B_{\\theta}^2 - B_{\phi}^2$',
+                         '$B_r \, B_{\\theta}$ or $B_r \, B_{\phi}$',
+                         '$B_r^2$',
+                         '$B_{\\theta}^2 + B_{\phi}^2$'])
+
+    for i in range(4):
+        row, col = i//2, i%2
+        # plotting the m = 0 component
+        ax[row,col].set_yscale('symlog')
+        ax[row,col].plot(r, kern[i][2, 0], 'k', label='$s=0$')
+        ax[row,col].plot(r, kern[i][2, 1], 'r', label='$s=2$')
+        ax[row,col].grid(True)
+        ax[row,col].set_xlim([0,1])
+        ax[row,col].text(0.1, 0.9, f'$K^{{{kernel_components[i]}}}$ for {mag_comp[i]}',
+                        horizontalalignment='left',
+                        verticalalignment='top',
+                        transform = ax[row,col].transAxes, fontsize=16)
+
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel(r"$r/R_{\star}$", fontsize=16, labelpad=15)
+    plt.ylabel("Kernel in arbitrary units", fontsize=16, labelpad=20)
+
+    # making a single legend for all subplots
+    handles, labels = ax[0,0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper right', ncol=2, fontsize=16)
+
+    plt.subplots_adjust(left=0.06, bottom=0.08, right=0.98, top=0.93, wspace=0.1, hspace=0.1)
+    plt.title(f'Mode: $n=${n}, $\ell$={ell}', fontsize=20)
+
+    plt.savefig(f'VincentKern_n={n}_ell={ell}.pdf')
 
 def plot_kern_diff(r, kern1, kern2, s, comp_idx):
     '''
@@ -522,22 +542,50 @@ def test_computed_kernels(comp_kernels, r, isaxissymmkern=False):
 
 
 if __name__ == '__main__':
-    r_norm_Rstar = np.loadtxt('../sample_eigenfunctions/rn-162.txt')
-    r_raw, rho_raw = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
-    rho = np.interp(r_norm_Rstar, r_raw/r_raw[-1], rho_raw)
+    benchmarking = False
 
-    n = 162
-    ell = 2
+     #----------------------for the benchmarking case------------------------------#
+    if(benchmarking):
+        # reading the radius grid
+        r_norm_Rstar = np.loadtxt('../sample_eigenfunctions/rn-162.txt')
+        # desired mode
+        n = 162
+        ell = 2
+        # loading eigenfunctions here
+        Ui_raw = np.loadtxt('../sample_eigenfunctions/Un-162.txt')
+        Vi_raw = np.loadtxt('../sample_eigenfunctions/Vn-162.txt')
 
+    #----------------------when running the code in NOT benghmark mode------------------------------#
+    else:
+        # desired mode
+        n_str = '+4'
+        ell_str = '1'
+        # loading the corresponding file
+        eigfile = h5py.File(f'../Vincent_Eig/mode_h.{ell_str}_{n_str}_hz.h5')
+        # the radius grid
+        r_norm_Rstar = eigfile['x'][()]   # reading it off a random file since its the same for all
+        # loading eigenfunctions here
+        
+        Ui_raw = eigfile['xi_r']['re'][()]
+        Vi_raw = eigfile['xi_h']['re'][()]
+
+        # converting n and ell back to integers
+        n, ell = int(n_str), int(ell_str)
+
+    # the desired s values
     s = np.array([0, 2])
 
     # initializing the kernel class for a specific field geometry and a radial grid
-    make_kern_s = magkerns(s, r_norm_Rstar, rho)
+    make_kern_s = magkerns(s, r_norm_Rstar)
 
     # calling the generic kernel computation
     # kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1))
     # calling the axisymmetric field kernel computation
-    kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1))
+    kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1), Ui_raw, Vi_raw)
 
     # benchmarking the kernel computation
-    test_computed_kernels(kern, r_norm_Rstar, isaxissymmkern=True)
+    if(benchmarking):
+        test_computed_kernels(kern, r_norm_Rstar, isaxissymmkern=True)
+
+    else:
+        plot_kern_components(r_norm_Rstar, kern, n_str, ell_str)
