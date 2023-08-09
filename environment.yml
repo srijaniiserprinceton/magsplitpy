@@ -1,0 +1,23 @@
+name: astero
+channels: 
+  - defaults
+  - conda-forge
+  - anaconda
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - astropy
+  - celerite
+  - pandas
+  - matplotlib
+  - h5py
+  - ipython
+  - lightkurve
+  - pip
+  - pip:
+    - sphinx
+    - sphinx-rtd-theme
+    - pytest
+    - furo
+    - -e .
