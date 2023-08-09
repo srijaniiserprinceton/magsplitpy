@@ -430,8 +430,8 @@ def plot_kern_components(r, kern, n, ell):
         row, col = i//2, i%2
         # plotting the m = 0 component
         ax[row,col].set_yscale('symlog')
-        ax[row,col].plot(r, kern[i][2, 0], 'k', label='$s=0$')
-        ax[row,col].plot(r, kern[i][2, 1], 'r', label='$s=2$')
+        ax[row,col].plot(r, kern[i][4, 0], 'k', label='$s=0$')
+        ax[row,col].plot(r, kern[i][4, 1], 'r', label='$s=2$')
         ax[row,col].grid(True)
         ax[row,col].set_xlim([0,1])
         ax[row,col].text(0.1, 0.9, f'$K^{{{kernel_components[i]}}}$ for {mag_comp[i]}',
@@ -452,7 +452,7 @@ def plot_kern_components(r, kern, n, ell):
     plt.subplots_adjust(left=0.06, bottom=0.08, right=0.98, top=0.93, wspace=0.1, hspace=0.1)
     plt.title(f'Mode: $n=${n}, $\ell$={ell}', fontsize=20)
 
-    plt.savefig(f'VincentKern_n={n}_ell={ell}.pdf')
+    # plt.savefig(f'VincentKern_n={n}_ell={ell}.pdf')
 
 def plot_kern_diff(r, kern1, kern2, s, comp_idx):
     '''
@@ -558,8 +558,8 @@ if __name__ == '__main__':
     #----------------------when running the code in NOT benghmark mode------------------------------#
     else:
         # desired mode
-        n_str = '+4'
-        ell_str = '1'
+        n_str = '-2'
+        ell_str = '2'
         # loading the corresponding file
         eigfile = h5py.File(f'../Vincent_Eig/mode_h.{ell_str}_{n_str}_hz.h5')
         # the radius grid
