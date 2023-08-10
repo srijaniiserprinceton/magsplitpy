@@ -3,9 +3,11 @@
 # see Eqn.(D48) for the details of the coefficients.
 
 import numpy as np
+import sys
 
 from magsplitpy import misc_funcs
 from magsplitpy import mag_GSH_funcs
+from magsplitpy import synthetic_B_profiles as B_profiles
 
 class B_field_D20:
     """
@@ -165,15 +167,21 @@ def compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical_full)
 
 if __name__ == "__main__":
     # stipulating the field type: dipole/toroidal/mixed
-    field_type = 'mixed'
-    make_B_analytical = B_field_D20()
-    B_analytical, Bcoefs_analytical = make_B_analytical.make_B_D20(field_type=field_type)
-    Bcoefs_numerical = make_B_analytical.get_GSH_numerically(B_analytical)
-    compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical)
+    # field_type = 'mixed'
+    # make_B_analytical = B_field_D20()
+    # B_analytical, Bcoefs_analytical = make_B_analytical.make_B_D20(field_type=field_type)
+    # Bcoefs_numerical = make_B_analytical.get_GSH_numerically(B_analytical)
+    # compare_coefs_analytical_numerical(Bcoefs_analytical, Bcoefs_numerical)
+
+    make_B = B_profiles.synthetic_B()
+    r, rho = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
+    B = make_B.make_Bugnet2021_field(r/r.max(), rho)
+    # for now cropping the size of radius [FOR FASTER TESTING]
+    B = B[:,:,:,:10]    
 
     # making h_mu_nu_st_r
-    len_r = 10
-    sB_max = 1
+    len_r = B.shape[-1]
+    sB_max = 5
 
     # empty list for magnetic field coefficients
     B_r_mu_st = []
@@ -181,6 +189,7 @@ if __name__ == "__main__":
     # extracting the GSH components of the generic 3D B field one radial slice at a time
     for r_ind in range(len_r):
         print(r_ind)
+        Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(B[:,:,:,r_ind])
         B_r_mu_st.append(Bcoefs_numerical)
 
     # moving the radius dimension form the first to the very end

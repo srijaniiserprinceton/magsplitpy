@@ -30,12 +30,13 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
     """
     Br, Btheta, Bphi = B[0], B[1], B[2]
     # converting the Br(r,theta,phi) field to B^0_st(r)
-    B0_st_r = spht.field2coef(np.array([Br]))
+    B0_st_r = spht.field2coef(np.array([Br]), ellmax=nmax, mmax=mmax)
 
     # converting the Btheta(r,theta,phi) and Bphi(r,theta,phi) to
     # Bv_{st}(r) and Bw_{st}(r) of the Jackson convention
     Bvec = np.array([Btheta, Bphi])
-    B_Jackson_coefs = spht.field2coef(Bvec)
+    B_Jackson_coefs = spht.field2coef(Bvec, ellmax=nmax, mmax=mmax)
+    # B_Jackson_coefs = spht.field2coef(Bvec)
     BvJ_st_r, BwJ_st_r = B_Jackson_coefs.scoef1, B_Jackson_coefs.scoef2
 
     # converting to the DT convention first before converting to GSH components
@@ -45,8 +46,8 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
 
     # creating B^{mu}_st(r) array
     B_mu_st_r_ret = np.array([Bm_st_r._array_2d_repr(),
-                          B0_st_r._array_2d_repr(),
-                          Bp_st_r._array_2d_repr()])
+                              B0_st_r._array_2d_repr(),
+                              Bp_st_r._array_2d_repr()])
 
     # returning B^0_st_r(r), 
     return B_mu_st_r_ret
@@ -97,11 +98,14 @@ def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
             wig1 = wig_calc(s1,ss_BB,s2,mumu,-(mumu+nunu),nunu)
             # prefactor not dependent on t1 and t2
             prefac = (-1)**(np.abs(tt_BB+mumu+nunu)) * np.sqrt((2*s1+1)*(2*s2+1)*(2*ss_BB+1)/(4*np.pi))
-            for t1_idx, t1 in enumerate(tB_arr):
-                for t2_idx, t2 in enumerate(tB_arr):
-                    print(s1,s2,t1,t2)
+            for t1 in np.arange(-s1, s1+1):
+                for t2 in np.arange(-s2, s2+1):
+                    t1_idx = np.argmin(np.abs(tB_arr - t1))
+                    t2_idx = np.argmin(np.abs(tB_arr - t2))
+
                     # implementing Eqn(D56) in Das 2020
                     wig2 = wig_calc(s1,ss_BB,s2,t1,-tt_BB,t2)
+
                     h_mu_nu_st_r += B_mu_st_obj[:,NAX,s1_idx,t1_idx,NAX,NAX,:] *\
                                     B_mu_st_obj[NAX,:,s2_idx,t2_idx,NAX,NAX,:] *\
                                     (prefac * wig1 * wig2)[:,:,:,:,NAX]
