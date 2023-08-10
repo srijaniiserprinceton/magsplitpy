@@ -24,7 +24,7 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
 
     Returns:
     --------
-    B_mu_st_r : ndarray, shape (3, nmax, mmax)
+    B_mu_st_r_ret : ndarray, shape (3, nmax, mmax)
                 Array of cofficients for each spherical shell. Retains
                 the same number of points in radius.
     """
@@ -44,12 +44,12 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
     Bm_st_r, Bp_st_r = spht.make_GSH_from_VSH(BvDT_st_r, BwDT_st_r)
 
     # creating B^{mu}_st(r) array
-    B_mu_st_r = np.array([Bm_st_r._array_2d_repr(),
+    B_mu_st_r_ret = np.array([Bm_st_r._array_2d_repr(),
                           B0_st_r._array_2d_repr(),
                           Bp_st_r._array_2d_repr()])
 
     # returning B^0_st_r(r), 
-    return B_mu_st_r
+    return B_mu_st_r_ret
  
 # using the GSH coefficients of B to build GSH coefficients of BB
 def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
@@ -58,7 +58,7 @@ def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
 
     Parameters:
     -----------
-    B_mu_st_r : ndarray, shape (3, nmax, mmax, r)
+    B_mu_st_obj : ndarray, shape (3, nmax, mmax, r)
                 Array of cofficients for B.
 
     Returns:
@@ -84,7 +84,7 @@ def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
     wig_calc = np.vectorize(fn.wig)
 
     # the array to store the h^{mu,nu}_{st} components
-    h_mu_nu_st_r = np.zeros((3, 3, sBB_max+1, 2*sBB_max+1, B_mu_st_r.shape[-1]),
+    h_mu_nu_st_r = np.zeros((3, 3, sBB_max+1, 2*sBB_max+1, B_mu_st_obj.shape[-1]),
                              dtype = complex)
 
     # making meshgrid to make less loops
@@ -102,15 +102,15 @@ def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
                     print(s1,s2,t1,t2)
                     # implementing Eqn(D56) in Das 2020
                     wig2 = wig_calc(s1,ss_BB,s2,t1,-tt_BB,t2)
-                    h_mu_nu_st_r += B_mu_st_r[:,NAX,s1_idx,t1_idx,NAX,NAX,:] *\
-                                    B_mu_st_r[NAX,:,s2_idx,t2_idx,NAX,NAX,:] *\
+                    h_mu_nu_st_r += B_mu_st_obj[:,NAX,s1_idx,t1_idx,NAX,NAX,:] *\
+                                    B_mu_st_obj[NAX,:,s2_idx,t2_idx,NAX,NAX,:] *\
                                     (prefac * wig1 * wig2)[:,:,:,:,NAX]
 
     return h_mu_nu_st_r
 
 
 if __name__ == "__main__":
-    sB_max = 5
+    sB_max = 1
     # B_mu_st_r = np.random.rand(3, sB_max+1, 2*sB_max+1, 1000)
 
     # constructing a generic 3D magnetic field
