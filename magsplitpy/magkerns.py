@@ -54,7 +54,8 @@ class magkerns:
         '''3j symbol with upper row fixed (inner)'''
         # wig_vect = np.vectorize(fn.wig,otypes=[float])
         # return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
-        return fn.w3j_vecm(self.l_,self.ss_i,self.l,m1,m2,m3)
+        # return fn.w3j_vecm(self.l_,self.ss_i,self.l,m1,m2,m3)
+        return fn.w3j_vecm(self.l_,self.s,self.l,m1,m2,m3)
 
     def ret_kerns(self, n, l, m, Ui, Vi, n_=None, l_=None, m_=None, Ui_=None, Vi_=None, smoothen=False):    
         '''
@@ -189,65 +190,51 @@ class magkerns:
         om3 = om(l,3)
         om3_ = om(l_,3)
 
+
         #B-- EXPRESSION
-        # Bmm = self.wig_red(2,-2,0)*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
-        # Bmm += self.wig_red(0,-2,2)*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
-        # Bmm += self.wig_red(1,-2,1)*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
-        #         + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
-        # Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
-        # Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V                
-
-        # Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
-        #          * Bmm[np.newaxis,:,:]
-
-        Bmm = om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
-        Bmm += om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
-        Bmm += om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
+        Bmm = self.wig_red(2,-2,0)[:,NAX]*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
+        Bmm += self.wig_red(0,-2,2)[:,NAX]*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
+        Bmm += self.wig_red(1,-2,1)[:,NAX]*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
                 + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
-        Bmm += om0*om0_*om2_*om3_*V_*V
-        Bmm += om0_*om0*om2*om3*V_*V                
+        Bmm += self.wig_red(3,-2,-1)[:,NAX]*om0*om0_*om2_*om3_*V_*V
+        Bmm += self.wig_red(-1,-2,3)[:,NAX]*om0_*om0*om2*om3*V_*V                
 
         Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
                  * Bmm[np.newaxis,:,:]
     
-        print('Bmm')
 
         #B0- EXPRESSION
-        B0m = self.wig_red(1,-1,0)*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
+        B0m = self.wig_red(1,-1,0)[:,NAX]*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
                 + 2*r**2*dU*dV_ - r*om0**2 *V_*dV + r**2 *V_*d2U + U*((-6.-2.*om0_**2+om0**2)*V_ + r*(4.*dV_-r*d2V_)))
-        B0m += self.wig_red(0,-1,1)*om0*(4.*om0_**2 *V*V_ + U*(8.*U_-5.*om0_**2 *V_) - 3.*r*om0_**2 *V_*dV \
+        B0m += self.wig_red(0,-1,1)[:,NAX]*om0*(4.*om0_**2 *V*V_ + U*(8.*U_-5.*om0_**2 *V_) - 3.*r*om0_**2 *V_*dV \
                 + 2*r**2*dU_*dV - r*om0_**2 *V*dV_ + r**2 *V*d2U_ + U_*((-6.-2.*om0**2+om0_**2)*V + r*(4.*dV-r*d2V)))
-        B0m += self.wig_red(-1,-1,2)*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
-        B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
+        B0m += self.wig_red(-1,-1,2)[:,NAX]*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
+        B0m += self.wig_red(2,-1,-1)[:,NAX]*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
         B0m = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * B0m[np.newaxis,:,:]
 
 
-        print('B0m')
-
         #B00 EXPRESSION
-        B00 = self.wig_red(0,0,0)*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
+        B00 = self.wig_red(0,0,0)[:,NAX]*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
                 - 5.*om0**2*V*U_ + 4.*om0**2*om0_**2*V_*V + om0_**2*r*U*dV_ + om0**2*r*U_*dV + 6.*U_*U)
-        B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
+        B00 += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
         B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * B00[np.newaxis,:,:]
 
-        print('B00')
 
         #B+- EXPRESSION
-        Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
+        Bpm = self.wig_red(0,0,0)[:,NAX]*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
                 -om0_**2*U*V_-om0**2*U_*V+om0_**2*r*U*dV_+om0**2*r*U_*dV + 2.*U_*U)
-        Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))*(-4.*om0*om0_*om2*om2_*V_*V)
-        Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
+        Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))[:,NAX]*(-4.*om0*om0_*om2*om2_*V_*V)
+        Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
 
         Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * Bpm[np.newaxis,:,:]
 
-        print('Bpm')
 
         #constructing the other two components of the kernel
         Bpp = parity_fac[:,:,:,np.newaxis]*Bmm
@@ -387,42 +374,42 @@ class magkerns:
         om3_ = om(l_,3)
 
         #B-- EXPRESSION
-        Bmm = self.wig_red(2,-2,0)*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
-        Bmm += self.wig_red(0,-2,2)*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
-        Bmm += self.wig_red(1,-2,1)*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
+        Bmm = self.wig_red(2,-2,0)[:,NAX]*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
+        Bmm += self.wig_red(0,-2,2)[:,NAX]*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
+        Bmm += self.wig_red(1,-2,1)[:,NAX]*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
                 + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
-        Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
-        Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V   
+        Bmm += self.wig_red(3,-2,-1)[:,NAX]*om0*om0_*om2_*om3_*V_*V
+        Bmm += self.wig_red(-1,-2,3)[:,NAX]*om0_*om0*om2*om3*V_*V   
 
         Bmm = 0.5*(((-1)**np.abs(1+self.mm))*prefac)[:,:,np.newaxis] \
                  * Bmm[np.newaxis,:,:]
 
         #B0- EXPRESSION
-        B0m = self.wig_red(1,-1,0)*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
+        B0m = self.wig_red(1,-1,0)[:,NAX]*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
                 + 2*r**2*dU*dV_ - r*om0**2 *V_*dV + r**2 *V_*d2U + U*((-6.-2.*om0_**2+om0**2)*V_ + r*(4.*dV_-r*d2V_)))
-        B0m += self.wig_red(0,-1,1)*om0*(4.*om0_**2 *V*V_ + U*(8.*U_-5.*om0_**2 *V_) - 3.*r*om0_**2 *V_*dV \
+        B0m += self.wig_red(0,-1,1)[:,NAX]*om0*(4.*om0_**2 *V*V_ + U*(8.*U_-5.*om0_**2 *V_) - 3.*r*om0_**2 *V_*dV \
                 + 2*r**2*dU_*dV - r*om0_**2 *V*dV_ + r**2 *V*d2U_ + U_*((-6.-2.*om0**2+om0_**2)*V + r*(4.*dV-r*d2V)))
-        B0m += self.wig_red(-1,-1,2)*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
-        B0m += self.wig_red(2,-1,-1)*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
+        B0m += self.wig_red(-1,-1,2)[:,NAX]*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
+        B0m += self.wig_red(2,-1,-1)[:,NAX]*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
         B0m = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * B0m[np.newaxis,:]
         
 
         #B00 EXPRESSION
-        B00 = self.wig_red(0,0,0)*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
+        B00 = self.wig_red(0,0,0)[:,NAX]*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
                 - 5.*om0**2*V*U_ + 4.*om0**2*om0_**2*V_*V + om0_**2*r*U*dV_ + om0**2*r*U_*dV + 6.*U_*U)
-        B00 += (self.wig_red(-1,0,1) + self.wig_red(1,0,-1))*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
+        B00 += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
         B00 = (0.5*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * B00[np.newaxis,:]
 
         #B+- EXPRESSION
-        Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
+        Bpm = self.wig_red(0,0,0)[:,NAX]*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
                 -om0_**2*U*V_-om0**2*U_*V+om0_**2*r*U*dV_+om0**2*r*U_*dV + 2.*U_*U)
-        Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))*(-4.*om0*om0_*om2*om2_*V_*V)
-        Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
+        Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))[:,NAX]*(-4.*om0*om0_*om2*om2_*V_*V)
+        Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
         Bpm = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
                 * Bpm[np.newaxis,:]

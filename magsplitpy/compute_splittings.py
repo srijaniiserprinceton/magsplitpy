@@ -64,7 +64,6 @@ if __name__ == "__main__":
 
     # calling the generic kernel computation
     kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1), Ui_raw, Vi_raw)
-    print("Kernels computed.")
     # calling the axisymmetric field kernel computation
     # kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1), Ui_raw, Vi_raw)
 
@@ -89,7 +88,6 @@ if __name__ == "__main__":
     # changing from shape (mu,nu,m.m_,sBB,r) to (mu,nu,sBB,m,m_,r)
     kern_mu_nu = np.moveaxis(kern_mu_nu, -2, 2)
 
-    print("Kernels reshaped.")
     sys.exit()
 
     #--------------obtaining the Lorentz-stress GSh components for
