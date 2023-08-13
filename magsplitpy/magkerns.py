@@ -199,8 +199,8 @@ class magkerns:
         Bmm += self.wig_red(3,-2,-1)[:,NAX]*om0*om0_*om2_*om3_*V_*V
         Bmm += self.wig_red(-1,-2,3)[:,NAX]*om0_*om0*om2*om3*V_*V                
 
-        Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
-                 * Bmm[np.newaxis,:,:]
+        Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,NAX] \
+                 * Bmm[NAX,:,:]
     
 
         #B0- EXPRESSION
@@ -211,8 +211,8 @@ class magkerns:
         B0m += self.wig_red(-1,-1,2)[:,NAX]*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
         B0m += self.wig_red(2,-1,-1)[:,NAX]*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
-        B0m = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * B0m[np.newaxis,:,:]
+        B0m = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,NAX] \
+                * B0m[NAX,:,:]
 
 
         #B00 EXPRESSION
@@ -221,8 +221,8 @@ class magkerns:
         B00 += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
-        B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * B00[np.newaxis,:,:]
+        B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,NAX] \
+                * B00[NAX,:,:]
 
 
         #B+- EXPRESSION
@@ -232,13 +232,13 @@ class magkerns:
         Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
 
-        Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
-                * Bpm[np.newaxis,:,:]
+        Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,NAX] \
+                * Bpm[NAX,:,:]
 
 
         #constructing the other two components of the kernel
-        Bpp = parity_fac[:,:,:,np.newaxis]*Bmm
-        Bp0 = parity_fac[:,:,:,np.newaxis]*B0m
+        Bpp = parity_fac[:,:,:,NAX]*Bmm
+        Bp0 = parity_fac[:,:,:,NAX]*B0m
 
         return Bmm,B0m,B00,Bpm,Bp0,Bpp
         
@@ -381,8 +381,8 @@ class magkerns:
         Bmm += self.wig_red(3,-2,-1)[:,NAX]*om0*om0_*om2_*om3_*V_*V
         Bmm += self.wig_red(-1,-2,3)[:,NAX]*om0_*om0*om2*om3*V_*V   
 
-        Bmm = 0.5*(((-1)**np.abs(1+self.mm))*prefac)[:,:,np.newaxis] \
-                 * Bmm[np.newaxis,:,:]
+        Bmm = 0.5*(((-1)**np.abs(1+self.mm))*prefac)[:,:,NAX] \
+                 * Bmm[NAX,:,:]
 
         #B0- EXPRESSION
         B0m = self.wig_red(1,-1,0)[:,NAX]*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
@@ -392,8 +392,8 @@ class magkerns:
         B0m += self.wig_red(-1,-1,2)[:,NAX]*om0*om0_*om2*(U*V_ + V*(U_-4.*V_+3.*r*dV_) + r*V_*dV)
         B0m += self.wig_red(2,-1,-1)[:,NAX]*om0_*om0*om2_*(U_*V + V_*(U-4.*V+3.*r*dV) + r*V*dV_)
 
-        B0m = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
-                * B0m[np.newaxis,:]
+        B0m = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,NAX] \
+                * B0m[NAX,:]
         
 
         #B00 EXPRESSION
@@ -402,8 +402,8 @@ class magkerns:
         B00 += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(-1.*om0_*om0)*(-U_*V-U*V_+2.*V_*V+r*V*dU_\
                 +r*V_*dU-2.*r*V*dV_-2*r*V_*dV+r*U*dV_+r*U_*dV+2*r**2 *dV_*dV)
 
-        B00 = (0.5*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
-                * B00[np.newaxis,:]
+        B00 = (0.5*((-1)**np.abs(self.mm))*prefac)[:,:,NAX] \
+                * B00[NAX,:]
 
         #B+- EXPRESSION
         Bpm = self.wig_red(0,0,0)[:,NAX]*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
@@ -411,12 +411,12 @@ class magkerns:
         Bpm += (self.wig_red(-2,0,2)+self.wig_red(2,0,-2))[:,NAX]*(-4.*om0*om0_*om2*om2_*V_*V)
         Bpm += (self.wig_red(-1,0,1)+self.wig_red(1,0,-1))[:,NAX]*(om0*om0_)*(-r*V*dU_-r*V_*dU-V_*U-V*U_+r*U*dV_+r*U_*dV+2.*U_*U)
 
-        Bpm = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,np.newaxis] \
-                * Bpm[np.newaxis,:]
+        Bpm = (0.25*((-1)**np.abs(self.mm))*prefac)[:,:,NAX] \
+                * Bpm[NAX,:]
 
         #constructing the other two components of the kernel
-        Bpp = parity_fac[:,:,np.newaxis]*Bmm
-        Bp0 = parity_fac[:,:,np.newaxis]*B0m
+        Bpp = parity_fac[:,:,NAX]*Bmm
+        Bp0 = parity_fac[:,:,NAX]*B0m
 
 
         return Bmm,B0m,B00,Bpm,Bp0,Bpp
