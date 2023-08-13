@@ -46,13 +46,15 @@ class magkerns:
 
     def wig_red_o(self, m1, m2, m3):
         '''3j symbol with upper row fixed (outer)'''
-        wig_vect = np.vectorize(fn.wig,otypes=[float])
-        return wig_vect(self.l_,self.ss_o,self.l,m1,m2,m3)
+        # wig_vect = np.vectorize(fn.wig,otypes=[float])
+        # return wig_vect(self.l_,self.ss_o,self.l,m1,m2,m3)
+        return fn.w3j_vecm(self.l_,self.ss_o,self.l,m1,m2,m3)
 
     def wig_red(self, m1, m2, m3):
         '''3j symbol with upper row fixed (inner)'''
-        wig_vect = np.vectorize(fn.wig,otypes=[float])
-        return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
+        # wig_vect = np.vectorize(fn.wig,otypes=[float])
+        # return wig_vect(self.l_,self.ss_i,self.l,m1,m2,m3)
+        return fn.w3j_vecm(self.l_,self.ss_i,self.l,m1,m2,m3)
 
     def ret_kerns(self, n, l, m, Ui, Vi, n_=None, l_=None, m_=None, Ui_=None, Vi_=None, smoothen=False):    
         '''
@@ -131,7 +133,6 @@ class magkerns:
         prefac = np.sqrt((2*l_+1.) * (2*self.ss_o+1.) * (2*l+1.) \
                  / (4.* np.pi)) * self.wig_red_o(-self.mm_,self.mm_-self.mm,self.mm)
 
-
         #----------------EIGENFUCNTION DERIVATIVES--------------------#
         #interpolation params
         if(smoothen == True):
@@ -189,16 +190,27 @@ class magkerns:
         om3_ = om(l_,3)
 
         #B-- EXPRESSION
-        Bmm = self.wig_red(2,-2,0)*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
-        Bmm += self.wig_red(0,-2,2)*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
-        Bmm += self.wig_red(1,-2,1)*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
+        # Bmm = self.wig_red(2,-2,0)*om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
+        # Bmm += self.wig_red(0,-2,2)*om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
+        # Bmm += self.wig_red(1,-2,1)*om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
+        #         + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
+        # Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
+        # Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V                
+
+        # Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
+        #          * Bmm[np.newaxis,:,:]
+
+        Bmm = om0_*om2_*(V_*(3.*U-2.*om0**2 *V + 3.*r*dU) - r*U*dV_)
+        Bmm += om0*om2*(V*(3.*U_-2.*om0_**2 *V_ + 3.*r*dU_) - r*U_*dV)
+        Bmm += om0_*om0*(3.*U*V_+3.*U_*V-2.*om0_**2 *V_*V - 2.*om0**2 *V_*V \
                 + om2_**2*V_*V + om2**2 *V_*V + r*V*dU_ + r*V_*dU - r*U*dV_ - r*U_*dV - 2.*U_*U)
-        Bmm += self.wig_red(3,-2,-1)*om0*om0_*om2_*om3_*V_*V
-        Bmm += self.wig_red(-1,-2,3)*om0_*om0*om2*om3*V_*V                
+        Bmm += om0*om0_*om2_*om3_*V_*V
+        Bmm += om0_*om0*om2*om3*V_*V                
 
         Bmm = 0.5*(((-1)**np.abs(1+self.mm_))*prefac)[:,:,:,np.newaxis] \
                  * Bmm[np.newaxis,:,:]
     
+        print('Bmm')
 
         #B0- EXPRESSION
         B0m = self.wig_red(1,-1,0)*om0_*(4.*om0**2 *V_*V + U_*(8.*U-5.*om0**2* V) - 3.*r*om0**2*V*dV_ \
@@ -212,6 +224,8 @@ class magkerns:
                 * B0m[np.newaxis,:,:]
 
 
+        print('B0m')
+
         #B00 EXPRESSION
         B00 = self.wig_red(0,0,0)*2.*(-2.*r*U*dU_ - 2.*r*U_*dU + om0**2*r*V*dU_ + om0_**2*r*V_*dU - 5.*om0_**2*V_*U \
                 - 5.*om0**2*V*U_ + 4.*om0**2*om0_**2*V_*V + om0_**2*r*U*dV_ + om0**2*r*U_*dV + 6.*U_*U)
@@ -220,6 +234,8 @@ class magkerns:
 
         B00 = (0.5*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * B00[np.newaxis,:,:]
+
+        print('B00')
 
         #B+- EXPRESSION
         Bpm = self.wig_red(0,0,0)*2.*(-2.*r*dU_*U-2.*r*dU*U_+om0**2*r*dU_*V+om0_**2*r*dU*V_-2.*r**2*dU_*dU \
@@ -230,6 +246,8 @@ class magkerns:
 
         Bpm = (0.25*((-1)**np.abs(self.mm_))*prefac)[:,:,:,np.newaxis] \
                 * Bpm[np.newaxis,:,:]
+
+        print('Bpm')
 
         #constructing the other two components of the kernel
         Bpp = parity_fac[:,:,:,np.newaxis]*Bmm

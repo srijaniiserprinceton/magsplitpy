@@ -26,12 +26,15 @@ def w3j_vecm(l1, l2, l3, m1, m2, m3):
     wigvals - np.ndarray(ndim=1, dtype=np.float32)
     """
     l1 = int(2*l1)
-    l2 = int(2*l2)
+    # l2 = int(2*l2)
     l3 = int(2*l3)
+    # l1 = 2*l1.astype('int')
+    l2 = 2*l2.astype('int')
+    # l3 = 2*l3.astype('int')
     m1 = 2*m1
     m2 = 2*m2
     m3 = 2*m3
-    wigvals = py3nj.wigner3j(l1, l2, l3, m1, m2, m3)
+    wigvals = py3nj.wigner3j(l1, l2, l3, m1, m2, m3, ignore_invalid=True)
     return wigvals
 
 def omega(l,n):
