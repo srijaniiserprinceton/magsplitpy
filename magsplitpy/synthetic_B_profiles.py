@@ -1,9 +1,13 @@
+import os
 import numpy as np
 from scipy.special import spherical_jn, spherical_yn
 from scipy.interpolate import interp1d
 from scipy.integrate import simpson
 import matplotlib.pyplot as plt
 plt.ion()
+
+os.environ["F90"] = "gfortran"
+from avni.tools.bases import eval_splrem, eval_polynomial, eval_vbspl
 
 NAX = np.newaxis
 
@@ -31,6 +35,13 @@ class synthetic_B:
 
         # rho is only needed for the profile of Bugnet 2021
         self.rho = None
+
+        # bspline basis in radius (only computed if required)
+        self.bsp_basis = None
+        # this is supposed to be the radius within which we have high density of knots
+        self.rshell = None  
+        self.knot_ind_shell = None  
+        self.knot_locs = None
 
     def dipolar_B(self):
         """
@@ -131,9 +142,13 @@ class synthetic_B:
             return B
 
     
-    def make_Bugnet2021_field(self, r, rho):
+    def make_Bugnet2021_field(self, r, rho, stretch_radius=False, toreturn1D=False):
         lam   = 2.80
         R_rad = 0.136391
+
+        if(stretch_radius):
+            r = r/R_rad
+            R_rad = 1.0
 
         # rho interpolation function
         rho_interp = interp1d(r, rho)
@@ -190,7 +205,9 @@ class synthetic_B:
 
         mask2 = np.where((my_r_vals[:] >= R_rad))
         A_array = np.array(A_array)
-        A_array[mask2] = 0.
+
+        if(~stretch_radius):
+            A_array[mask2] = 0.
 
         Br_array = 2 * A_array / my_r_vals**2
         Bt_array = - np.gradient( A_array , my_r_vals ) / my_r_vals
@@ -211,6 +228,9 @@ class synthetic_B:
         Bp_array = Bp_array/np.max(Br_array)
         Br_array = Br_array/np.max(Br_array)
 
+        if(toreturn1D):
+            return np.array([Br_array, Bt_array, Bp_array])
+
         # introducing the theta and phi dependencies
         B = np.array([Br_array[NAX,NAX,:] * np.cos(self.thth)[:,:,NAX],
                       Bt_array[NAX,NAX,:] * np.sin(self.thth)[:,:,NAX],
@@ -225,8 +245,129 @@ class synthetic_B:
         plt.plot(self.r, B[1], '--k', label='$B_{\\theta}$')
         plt.plot(self.r, B[2], ':k', label='$B_{\phi}$')
 
+        # plt.ylim([-0.05, 0.05])
+        plt.ylim([-1.2, 1.2])
+        plt.xlim([0, 1])
+
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+
+    def create_bsplines(self, custom_knot_num, rshell=2e-2):
+        rmin, rmax = self.r.min(), self.r.max()
+        self.rshell = rshell
+        total_knot_num = int(np.round((rmax-rmin)/(1 - self.rshell))) \
+                         * custom_knot_num
+        total_knot_num += 4 - total_knot_num%4 - 1
+
+        num_skip = len(self.r)//total_knot_num
+        knot_locs_uniq = self.r[::num_skip][:total_knot_num-1]
+        knot_locs_uniq = np.append(knot_locs_uniq, rmax)
+        knot_ind_shell = np.argmin(abs(knot_locs_uniq - self.rshell))
+        self.knot_ind_shell = knot_ind_shell - knot_ind_shell%4
+        knotval_shell = knot_locs_uniq[self.knot_ind_shell]
+        # print(f"knotlocsuniq shape = {knot_locs_uniq.shape}, {self.knot_ind_th}")
+
+        knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_shell],
+                               knot_locs_uniq[self.knot_ind_shell:]))
+        self.knot_locs = knot_locs
+        # print(f"knotlocs shape = {knot_locs.shape}")
+
+        #----------ORIGINAL SPLINE CONFIGURATION FROM HELIOSEISMOLOGY-------------------#
+        # vercof1, dvercof1 = eval_polynomial(self.r,
+        #                                     [rmin, self.knot_locs[self.knot_ind_shell]],
+        #                                     1, types= ['TOP','BOTTOM'])
+        # vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq[:self.knot_ind_shell+1])
+        # vercof3, dvercof3 = eval_polynomial(self.r,
+        #                                     [self.knot_locs[self.knot_ind_shell], rmax],
+        #                                     1, types= ['TOP','BOTTOM'])
+        # vercof4, dvercof4 = eval_vbspl(self.r, knot_locs_uniq[self.knot_ind_shell:])
+        
+        vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
+                                            1, types= ['TOP','BOTTOM'])
+        vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq)
+
+        idx = np.where(vercof1[:, -1] > 0)[0][0]
+        vercof1[idx, -1] = 0.0
+
+        # idx = np.where(vercof3[:, -1] > 0)[0][0]
+        # vercof3[idx, -1] = 0.0
+
+        # idx = np.where(vercof4[:, 0] > 0)[0][0]
+        # vercof4[idx, 0] = 0.0
+
+        # arranging the basis from left to right with st lines                                
+        # bsp_basis = np.column_stack((vercof1[:, :],
+        #                              vercof2[:, :],                                        
+        #                              vercof3[:, :],
+        #                              vercof4[:, :]))                                          
+
+        bsp_basis = np.column_stack((vercof1[:, :],
+                                     vercof2[:, :]))
+
+        # d_bsp_basis = np.column_stack((dvercof1[:, :],
+        #                                dvercof2[:, :]))
+        
+        self.knot_ind_shell = self.knot_ind_shell + 4
+
+        knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_shell+1],
+                               knot_locs_uniq[self.knot_ind_shell:]))
+        self.knot_locs = knot_locs
+
+        # storing the analytically derived B-splines and it first derivatives
+        # making them of shape (n_basis, r)
+        self.bsp_basis = bsp_basis.T
+        # self.d_bsp_basis = d_bsp_basis.T
+
+
+    def get_radial_spline_coefs(self, B):
+        # creating the carr corresponding to the DPT using custom knots
+        Gtg = self.bsp_basis @ self.bsp_basis.T   # shape(n_basis, n_basis)
+
+        # moving B axis to make the following matrix multiplications compatible
+        B = np.moveaxis(B, -1, -2)
+
+        # computing the coefficient arrays (c_arr)
+        c_arr = np.linalg.inv(Gtg) @ (self.bsp_basis @ B)
+        c_arr = np.moveaxis(c_arr, 2, 1)
+
+        # these coefficient array is of shape (3 x knots x theta x phi)
+        return c_arr
+
+    def reconstruct_field_from_spline(self, c_arr):
+        B_rec = np.moveaxis(c_arr, 1, -1) @ self.bsp_basis
+
+        # reconstructed B has shape (3 x Ntheta x Nphi x len(r))
+        return B_rec
+
+    def plot_spline_basis(self):
+        fig, ax = plt.subplots(1, 1, figsize=(10,6))
+
+        for i in range(self.bsp_basis.shape[0]):
+            ax.plot(self.r, self.bsp_basis[i])
+
+        ax.set_xlim([0,1])
+
+        plt.tight_layout()
+
+    
+    def compare_spline_efficiency(self, B_rec, B_true):
+        plt.figure(figsize=(10,5))
+        
+        # plotting the true fueld
+        plt.plot(self.r, B_true[0,0,0,:], 'k', label='$B_r$')
+        plt.plot(self.r, B_true[1,90,0,:], 'k', label='$B_{\\theta}$')
+        plt.plot(self.r, B_true[2,90,0,:], 'k', label='$B_{\phi}$')
+
+        # plotting the reconstructed field
+        plt.plot(self.r, B_rec[0,0,0,:], '--r', label='$B_r^{\mathrm{rec}}$')
+        plt.plot(self.r, B_rec[1,90,0,:], '--r', label='$B_{\\theta}^{\mathrm{rec}}$')
+        plt.plot(self.r, B_rec[2,90,0,:], '--r', label='$B_{\phi}^{\mathrm{rec}}$')
+
         plt.ylim([-0.05, 0.05])
-        plt.xlim([0, 0.15])
+        plt.xlim([0, 1])
+
+        plt.title(f'Number of spline knots: {self.knot_locs.shape[0]}')
 
         plt.legend()
         plt.grid()
@@ -237,6 +378,22 @@ if __name__ == "__main__":
 
     # reading a sample density profile
     r, rho = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
-    B_Bugnet = make_B.make_Bugnet2021_field(r/r.max(), rho)
+    B_Bugnet_1D = make_B.make_Bugnet2021_field(r/r.max(), rho, stretch_radius=True, toreturn1D=True)
 
-    make_B.plot_synthetic_B_field(B_Bugnet)
+    # plotting the field
+    make_B.plot_synthetic_B_field(B_Bugnet_1D)
+
+    B_Bugnet_3D = make_B.make_Bugnet2021_field(r/r.max(), rho, stretch_radius=True)
+
+    # extracting the spline coefficients of the B-field for faster B_st(r) computation
+    make_B.create_bsplines(50)
+    c_arr = make_B.get_radial_spline_coefs(B_Bugnet_3D)
+
+    # plotting to see how the B-spline basis looks like
+    make_B.plot_spline_basis()
+
+    # reconstructing B
+    B_rec = make_B.reconstruct_field_from_spline(c_arr)
+
+    # plotting the reconstructed B
+    make_B.compare_spline_efficiency(B_rec, B_Bugnet_3D)

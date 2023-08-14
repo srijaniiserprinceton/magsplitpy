@@ -88,8 +88,6 @@ if __name__ == "__main__":
     # changing from shape (mu,nu,m.m_,sBB,r) to (mu,nu,sBB,m,m_,r)
     kern_mu_nu = np.moveaxis(kern_mu_nu, -2, 2)
 
-    sys.exit()
-
     #--------------obtaining the Lorentz-stress GSh components for
     # a given magnetic field-------------------------------------#
     make_B = B_profiles.synthetic_B()
