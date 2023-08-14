@@ -12,6 +12,7 @@ dependencies:
   - pandas
   - matplotlib
   - h5py
+  - tqdm
   - ipython
   - lightkurve
   - pip

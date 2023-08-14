@@ -28,17 +28,14 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
                 Array of cofficients for each spherical shell. Retains
                 the same number of points in radius.
     """
-    print('Computing radial coefficients')
     Br, Btheta, Bphi = B[0], B[1], B[2]
     # converting the Br(r,theta,phi) field to B^0_st(r)
     B0_st_r = spht.field2coef(np.array([Br]), ellmax=nmax, mmax=mmax)
-    print('Made radial coefficients')
 
     # converting the Btheta(r,theta,phi) and Bphi(r,theta,phi) to
     # Bv_{st}(r) and Bw_{st}(r) of the Jackson convention
     Bvec = np.array([Btheta, Bphi])
     B_Jackson_coefs = spht.field2coef(Bvec, ellmax=nmax, mmax=mmax)
-    print('Made vector coefficients')
     # B_Jackson_coefs = spht.field2coef(Bvec)
     BvJ_st_r, BwJ_st_r = B_Jackson_coefs.scoef1, B_Jackson_coefs.scoef2
 

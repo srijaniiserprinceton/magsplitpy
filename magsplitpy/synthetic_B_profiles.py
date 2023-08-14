@@ -283,13 +283,6 @@ class synthetic_B:
         #                                     1, types= ['TOP','BOTTOM'])
         # vercof4, dvercof4 = eval_vbspl(self.r, knot_locs_uniq[self.knot_ind_shell:])
         
-        vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
-                                            1, types= ['TOP','BOTTOM'])
-        vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq)
-
-        idx = np.where(vercof1[:, -1] > 0)[0][0]
-        vercof1[idx, -1] = 0.0
-
         # idx = np.where(vercof3[:, -1] > 0)[0][0]
         # vercof3[idx, -1] = 0.0
 
@@ -300,7 +293,15 @@ class synthetic_B:
         # bsp_basis = np.column_stack((vercof1[:, :],
         #                              vercof2[:, :],                                        
         #                              vercof3[:, :],
-        #                              vercof4[:, :]))                                          
+        #                              vercof4[:, :])) 
+
+        #-----------SPLINE CONFIGURATION WITH NO BOUNDARY CONSIDERATION IN BETWEEN-------------#
+        vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
+                                            1, types= ['TOP','BOTTOM'])
+        vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq)
+
+        idx = np.where(vercof1[:, -1] > 0)[0][0]
+        vercof1[idx, -1] = 0.0                                         
 
         bsp_basis = np.column_stack((vercof1[:, :],
                                      vercof2[:, :]))
@@ -324,18 +325,15 @@ class synthetic_B:
         # creating the carr corresponding to the DPT using custom knots
         Gtg = self.bsp_basis @ self.bsp_basis.T   # shape(n_basis, n_basis)
 
-        # moving B axis to make the following matrix multiplications compatible
-        B = np.moveaxis(B, -1, -2)
-
         # computing the coefficient arrays (c_arr)
-        c_arr = np.linalg.inv(Gtg) @ (self.bsp_basis @ B)
-        c_arr = np.moveaxis(c_arr, 2, 1)
+        c_arr = np.tensordot(np.tensordot(B, self.bsp_basis, axes=([-1],[-1])),
+                             np.linalg.inv(Gtg), axes=([-1],[-1]))
 
-        # these coefficient array is of shape (3 x knots x theta x phi)
+        # these coefficient array is of shape (3 x theta x phi x knots)
         return c_arr
 
     def reconstruct_field_from_spline(self, c_arr):
-        B_rec = np.moveaxis(c_arr, 1, -1) @ self.bsp_basis
+        B_rec = c_arr @ self.bsp_basis
 
         # reconstructed B has shape (3 x Ntheta x Nphi x len(r))
         return B_rec
