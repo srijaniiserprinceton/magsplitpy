@@ -104,7 +104,7 @@ def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
                     t2_idx = np.argmin(np.abs(tB_arr - t2))
 
                     # implementing Eqn(D56) in Das 2020
-                    wig2 = wig_calc(s1,ss_BB,s2,t1,-tt_BB,t2)
+                    wig2 = wig_calc(s1,ss_BB,s2,t1,tt_BB,t2)
 
                     h_mu_nu_st_r += B_mu_st_obj[:,NAX,s1_idx,t1_idx,NAX,NAX,:] *\
                                     B_mu_st_obj[NAX,:,s2_idx,t2_idx,NAX,NAX,:] *\

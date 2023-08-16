@@ -101,9 +101,6 @@ class magkerns:
         B0m and Bmm using parity factors, respectively.
         '''
 
-        # load eigenfunctions here
-        
-
         self.Ui = Ui
         self.Vi = Vi
 
@@ -569,10 +566,14 @@ if __name__ == '__main__':
         eigfile = h5py.File(f'../Vincent_Eig/mode_h.{ell_str}_{n_str}_hz.h5')
         # the radius grid
         r_norm_Rstar = eigfile['x'][()]   # reading it off a random file since its the same for all
+        rho = eigfile['rho'][()]
         # loading eigenfunctions here
-        
         Ui_raw = eigfile['xi_r']['re'][()]
         Vi_raw = eigfile['xi_h']['re'][()]
+        # # normalizing eigenfunctions at the outset
+        # eignorm = fn.eignorm(Ui_raw, Vi_raw, int(ell_str), r_norm_Rstar, rho)
+        # Ui_raw = Ui_raw / eignorm
+        # Vi_raw = Vi_raw / eignorm
 
         # converting n and ell back to integers
         n, ell = int(n_str), int(ell_str)

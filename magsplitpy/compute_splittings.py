@@ -7,6 +7,7 @@ from tqdm import tqdm
 from magsplitpy import synthetic_B_profiles as B_profiles
 from magsplitpy import magkerns
 from magsplitpy import mag_GSH_funcs
+from magsplitpy import misc_funcs as fn
 
 def compute_mag_coupling(kern, h, t_arr, r):
     # reading off the m array from the dimension of kern
@@ -47,12 +48,21 @@ if __name__ == "__main__":
     #---------------------making the kernel----------------------#
     # loading the corresponding file
     eigfile = h5py.File(f'../Vincent_Eig/mode_h.{ell_str}_{n_str}_hz.h5')
+    # parameters of the star
+    R_star = eigfile.attrs['R_star']
+    freq_nl = eigfile.attrs['freq'][0]
+
     # the radius grid
     r_norm_Rstar = eigfile['x'][()]   # reading it off a random file since its the same for all
-    # loading eigenfunctions here
+    rho = eigfile['rho'][()]
     
+    # loading eigenfunctions here
     Ui_raw = eigfile['xi_r']['re'][()]
     Vi_raw = eigfile['xi_h']['re'][()]
+    # normalizing eigenfunctions at the outset
+    eignorm = fn.eignorm(Ui_raw, Vi_raw, int(ell_str), r_norm_Rstar, rho)
+    Ui_raw = Ui_raw / eignorm
+    Vi_raw = Vi_raw / eignorm
 
     # converting n and ell back to integers
     n, ell = int(n_str), int(ell_str)
@@ -142,3 +152,9 @@ if __name__ == "__main__":
     print('Start Z_mag computation')
     Z_mag = compute_mag_coupling(kern_mu_nu, h_mu_nu_st_r, t_arr, r_norm_Rstar)
     print('End Z_mag computation')
+
+    # correctly normalizing into Hz
+    Z_mag = Z_mag / (2 * freq_nl * R_star**2)
+
+    # frequency splittings in the unrotated frame in day^{-1}
+    delta_omega_mag = np.diag(Z_mag).real * 3600 * 24
