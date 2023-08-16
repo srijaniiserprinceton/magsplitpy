@@ -58,7 +58,7 @@ if __name__ == "__main__":
     n, ell = int(n_str), int(ell_str)
 
     # the desired s values
-    s = np.arange(0, 11)
+    s = np.arange(0, 3)
 
     # initializing the kernel class for a specific field geometry and a radial grid
     make_kern_s = magkerns.magkerns(s, r_norm_Rstar)
@@ -89,35 +89,44 @@ if __name__ == "__main__":
     # changing from shape (mu,nu,m.m_,sBB,r) to (mu,nu,sBB,m,m_,r)
     kern_mu_nu = np.moveaxis(kern_mu_nu, -2, 2)
 
+    print("Kernels computed.")
+
     #--------------obtaining the Lorentz-stress GSh components for
     # a given magnetic field-------------------------------------#
     make_B = B_profiles.synthetic_B()
     r, rho = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
-    B = make_B.make_Bugnet2021_field(r/r.max(), rho, stretch_radius=True)
-    # for now cropping the size of radius [FOR FASTER TESTING]
-    # B = B[:,:,:,:10]   
+    B = make_B.make_Bugnet2021_field(r/r.max(), rho, B0=5e4, stretch_radius=True,
+                                     tointerpolate=True, r_interp=r_norm_Rstar)
+
+    print("3D magnetic field loaded.")
 
     # decomposing B into splines
+    print("Decomposing B field into splines in radius.")
     make_B.create_bsplines(50)
     c_arr = make_B.get_radial_spline_coefs(B)
 
     # making h_mu_nu_st_r
     num_knots = c_arr.shape[-1]
-    sB_max = 5
+    sB_max = 1
 
     # empty list for magnetic field coefficients
     B_j_mu_st = []
 
+    print("Extracting the VSH coefficients for the splined B.")
     # extracting the GSH components of the generic 3D B field one radial slice at a time
     for knot_ind in tqdm(range(num_knots)):
-        Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(c_arr[:,:,:,knot_ind])
+        Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(c_arr[:,:,:,knot_ind],
+                                                                nmax=sB_max,mmax=sB_max)
         B_j_mu_st.append(Bcoefs_numerical)
 
     # moving the radius dimension form the first to the very end
     B_mu_st_j = np.moveaxis(np.asarray(B_j_mu_st), 0, -1)
 
     #converting back to radius in grid
+    print("Reconstructing the B_mu_st_r from the spline coefficients.")
     B_mu_st_r = make_B.reconstruct_field_from_spline(B_mu_st_j)
+
+    # sys.exit()
 
     # getting the BB GSH components from the B GSH components
     print('Start h_mu_nu_st_r computation')

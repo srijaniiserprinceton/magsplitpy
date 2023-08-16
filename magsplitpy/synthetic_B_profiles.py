@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import json
 from scipy.special import spherical_jn, spherical_yn
 from scipy.interpolate import interp1d
 from scipy.integrate import simpson
@@ -142,7 +143,8 @@ class synthetic_B:
             return B
 
     
-    def make_Bugnet2021_field(self, r, rho, stretch_radius=False, toreturn1D=False):
+    def make_Bugnet2021_field(self, r, rho, B0=5e4, stretch_radius=False, toreturn1D=False, tointerpolate=False, r_interp=None):
+        '''
         lam   = 2.80
         R_rad = 0.136391
 
@@ -165,7 +167,7 @@ class synthetic_B:
             return spherical_yn(1,arg)
 
         def J_integral(r_in, r_out):
-            x = np.linspace(r_in, r_out,1000)
+            x = np.linspace(r_in, r_out,len(r)-1)
             
             term1 = j1(x)
             term2 = rho_interp(x)
@@ -175,7 +177,7 @@ class synthetic_B:
             return integral
             
         def Y_integral(r_in, r_out):
-            x = np.linspace(r_in, r_out,1000)
+            x = np.linspace(r_in, r_out, len(r)-1)
             
             term1 = y1(x)
             term2 = rho_interp(x)
@@ -196,7 +198,7 @@ class synthetic_B:
             return term1 + term2
 
         # making the radius grid
-        my_r_vals = np.logspace(np.log10(1e-4),np.log10(1),1000)
+        my_r_vals = np.logspace(np.log10(1e-4),np.log10(1), len(r)-1)
 
         # A_vec = np.vectorize(A)
         # A_array = A_vec(my_r_vals)
@@ -227,6 +229,21 @@ class synthetic_B:
         Bt_array = Bt_array/np.max(Br_array)
         Bp_array = Bp_array/np.max(Br_array)
         Br_array = Br_array/np.max(Br_array)
+        '''
+
+        Bugnet_field_data = json.load(open('../tests/Field.json'))
+        r, Br_array, Bt_array, Bp_array = np.asarray(Bugnet_field_data['r']),\
+                                          B0 * np.asarray(Bugnet_field_data['Br']),\
+                                          B0 * np.asarray(Bugnet_field_data['Bt']),\
+                                          B0 * np.asarray(Bugnet_field_data['Bp'])
+        self.r = r
+
+        if(tointerpolate):
+            Br_array = np.interp(r_interp, self.r, Br_array)
+            Bt_array = np.interp(r_interp, self.r, Bt_array)
+            Bp_array = np.interp(r_interp, self.r, Bp_array)
+
+            self.r = r_interp
 
         if(toreturn1D):
             return np.array([Br_array, Bt_array, Bp_array])

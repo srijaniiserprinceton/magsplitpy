@@ -8,3 +8,4 @@ docs/build/*
 .DS_Store
 Vincent_Eig
 plots
+*.json
