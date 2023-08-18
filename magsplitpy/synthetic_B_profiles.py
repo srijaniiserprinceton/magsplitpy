@@ -143,7 +143,7 @@ class synthetic_B:
             return B
 
     
-    def make_Bugnet2021_field(self, r, rho, B0=5e4, stretch_radius=False, toreturn1D=False, tointerpolate=False, r_interp=None):
+    def make_Bugnet2021_field(self, r, rho, B0=1.0, stretch_radius=False, toreturn1D=False, tointerpolate=False, r_interp=None):
         '''
         lam   = 2.80
         R_rad = 0.136391
@@ -355,6 +355,13 @@ class synthetic_B:
         # reconstructed B has shape (3 x Ntheta x Nphi x len(r))
         return B_rec
 
+    def interp_splines(self, r_new):
+        bsp_basis_new = np.zeros((len(self.bsp_basis), len(r_new)))
+        for i in range(len(self.bsp_basis)):
+            bsp_basis_new[i] = np.interp(r_new, self.r, self.bsp_basis[i])
+
+        return bsp_basis_new
+
     def plot_spline_basis(self):
         fig, ax = plt.subplots(1, 1, figsize=(10,6))
 
@@ -379,7 +386,7 @@ class synthetic_B:
         plt.plot(self.r, B_rec[1,90,0,:], '--r', label='$B_{\\theta}^{\mathrm{rec}}$')
         plt.plot(self.r, B_rec[2,90,0,:], '--r', label='$B_{\phi}^{\mathrm{rec}}$')
 
-        plt.ylim([-0.05, 0.05])
+        # plt.ylim([-0.05, 0.05])
         plt.xlim([0, 1])
 
         plt.title(f'Number of spline knots: {self.knot_locs.shape[0]}')
