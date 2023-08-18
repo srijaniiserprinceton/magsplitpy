@@ -4,11 +4,14 @@ import json
 from scipy.special import spherical_jn, spherical_yn
 from scipy.interpolate import interp1d
 from scipy.integrate import simpson
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 plt.ion()
 
 os.environ["F90"] = "gfortran"
 from avni.tools.bases import eval_splrem, eval_polynomial, eval_vbspl
+
+from magsplitpy import mag_GSH_funcs
 
 NAX = np.newaxis
 
@@ -19,9 +22,10 @@ class synthetic_B:
     Generalized Spherical Harmonic coefficients corresponding
     to these fields.
     """
-    def __init__(self, Ntheta=180, Nphi=360, get_B_GSH=False):
+    def __init__(self, r, rho=None, Ntheta=180, Nphi=360, B0=5e4, get_B_GSH=False, 
+                 custom_knot_num=30, sB_max=1, field_type='Bugnet_2021'):
         # grid in radius
-        self.r = None
+        self.r = r
 
         # number of points in theta and phi directions
         self.Ntheta, self.Nphi = Ntheta, Nphi
@@ -37,12 +41,33 @@ class synthetic_B:
         # rho is only needed for the profile of Bugnet 2021
         self.rho = None
 
-        # bspline basis in radius (only computed if required)
+        # initializing splines in radius
         self.bsp_basis = None
-        # this is supposed to be the radius within which we have high density of knots
-        self.rshell = None  
         self.knot_ind_shell = None  
         self.knot_locs = None
+        self.rshell = None  # this is supposed to be the radius within which we have high density of knots
+        self.create_bsplines(custom_knot_num) 
+        self.num_knots = self.bsp_basis.shape[0]
+
+        # the field type to compute
+        self.field_type = field_type
+        self.B0 = B0
+
+        self.B = self.get_B()
+        self.c_arr = self.get_radial_spline_coefs(self.B)
+        self.num_knots = self.c_arr.shape[-1]
+
+        # the maximum angular degree of magnetic field we are interested in
+        self.sB_max = sB_max
+
+        # extracting the h_mu_nu_st_r (multi-step process after projecting B onto VSH)
+        self.B_mu_st_j = None   # this is made a class attribute for making B on different grids of U,V
+        self.h_mu_nu_st_r = self.get_h_mu_nu_st_r_from_splines_of_B()
+        
+
+    def get_B(self):
+        if(self.field_type == 'Bugnet_2021'):
+            return self.make_Bugnet2021_field(self.r, rho=self.rho, B0=self.B0)
 
     def dipolar_B(self):
         """
@@ -143,7 +168,7 @@ class synthetic_B:
             return B
 
     
-    def make_Bugnet2021_field(self, r, rho, B0=1.0, stretch_radius=False, toreturn1D=False, tointerpolate=False, r_interp=None):
+    def make_Bugnet2021_field(self, r, rho, B0=1.0, toreturn1D=False):
         '''
         lam   = 2.80
         R_rad = 0.136391
@@ -236,14 +261,12 @@ class synthetic_B:
                                           B0 * np.asarray(Bugnet_field_data['Br']),\
                                           B0 * np.asarray(Bugnet_field_data['Bt']),\
                                           B0 * np.asarray(Bugnet_field_data['Bp'])
-        self.r = r
 
-        if(tointerpolate):
-            Br_array = np.interp(r_interp, self.r, Br_array)
-            Bt_array = np.interp(r_interp, self.r, Bt_array)
-            Bp_array = np.interp(r_interp, self.r, Bp_array)
-
-            self.r = r_interp
+        # interpolating B to the common r grid if not on the same grid in radius
+        if(len(self.r) != len(r)):
+            Br_array = np.interp(self.r, r, Br_array)
+            Bt_array = np.interp(self.r, r, Bt_array)
+            Bp_array = np.interp(self.r, r, Bp_array)
 
         if(toreturn1D):
             return np.array([Br_array, Bt_array, Bp_array])
@@ -394,6 +417,32 @@ class synthetic_B:
         plt.legend()
         plt.grid()
         plt.tight_layout()
+
+    def get_h_mu_nu_st_r_from_splines_of_B(self):
+        # empty list for magnetic field coefficients
+        B_j_mu_st = []
+
+        print("3. Extracting the VSH coefficients for the splined B.")
+        # extracting the GSH components of the generic 3D B field one radial slice at a time
+        for knot_ind in tqdm(range(self.num_knots)):
+            Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(self.c_arr[:,:,:,knot_ind],
+                                                            nmax=self.sB_max,mmax=self.sB_max)
+            B_j_mu_st.append(Bcoefs_numerical)
+
+        # moving the radius dimension form the first to the very end
+        self.B_mu_st_j = np.moveaxis(np.asarray(B_j_mu_st), 0, -1)
+
+        #converting back to radius in grid
+        print("4. Reconstructing the B_mu_st_r from the spline coefficients.")
+        B_mu_st_r = self.reconstruct_field_from_spline(self.B_mu_st_j)
+
+        # getting the BB GSH components from the B GSH components
+        print("5. Computing h_mu_nu_st_r.")
+        h_mu_nu_st_r = mag_GSH_funcs.make_BB_GSH_from_B_GSH(B_mu_st_r, sB_max=self.sB_max)
+
+        return h_mu_nu_st_r
+
+
 
 if __name__ == "__main__":
     make_B = synthetic_B()

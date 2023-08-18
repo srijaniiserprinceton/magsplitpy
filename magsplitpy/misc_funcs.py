@@ -1,9 +1,13 @@
+import os
+import h5py
 import numpy as np
 from sympy.physics.wigner import wigner_3j
 from sympy import N as sympy_eval
 import scipy.special as special
+from statistics import mode
 import sympy as sy
 import py3nj
+import re
 
 P_j = np.array([])
 
@@ -153,3 +157,29 @@ def a_coeff_GSO(del_om,l,jmax):
 def eignorm(U,V,ell,r,rho):
     return np.sqrt(np.trapz(rho * (U**2 + ell*(ell+1) * V**2) * r**2, r) * 4 * np.pi)
 
+# finding the grid that appears most frequently in a given set of GYRE eigenfunctions
+def find_mode_r_grid(dir_eigfiles):
+    print("1. Scanning through modefiles to find the most common grid.")
+    filenames = np.asarray(os.listdir(f'{dir_eigfiles}/'))
+    len_r = []
+
+    for f in filenames:
+        n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
+        ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
+        eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        len_r.append(eigfile['x'][()].shape[0])
+
+    len_r = np.asarray(len_r)
+    mode_len_r = mode(len_r)
+    
+    for f in filenames:
+        n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
+        ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
+        eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        if(eigfile['x'][()].shape[0] == mode_len_r): break
+
+    # the radius and rho grid for most multiplets
+    r_norm_Rstar = eigfile['x'][()]   # reading it off a random file since its the same for all
+    rho = eigfile['rho'][()]
+
+    return r_norm_Rstar, rho
