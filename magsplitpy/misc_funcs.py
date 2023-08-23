@@ -164,18 +164,20 @@ def find_mode_r_grid(dir_eigfiles):
     len_r = []
 
     for f in filenames:
-        n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
-        ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
-        eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        # n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
+        # ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
+        # eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        eigfile = h5py.File(f'{dir_eigfiles}/' + f)
         len_r.append(eigfile['x'][()].shape[0])
 
     len_r = np.asarray(len_r)
     mode_len_r = mode(len_r)
     
     for f in filenames:
-        n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
-        ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
-        eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        # n_str = re.split('[_]+', f, flags=re.IGNORECASE)[2]
+        # ell_str = re.split('[.]+', re.split('[_]+', f, flags=re.IGNORECASE)[1])[1]
+        # eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        eigfile = h5py.File(f'{dir_eigfiles}/' + f)
         if(eigfile['x'][()].shape[0] == mode_len_r): break
 
     # the radius and rho grid for most multiplets

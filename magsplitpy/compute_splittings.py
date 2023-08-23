@@ -4,13 +4,13 @@ import sys
 import os
 import re
 import h5py
+import json
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib import rc
 plt.ion()
 
 font = {'size'   : 20}
-
 rc('font', **font)
 
 from magsplitpy import synthetic_B_profiles as B_profiles
@@ -19,7 +19,7 @@ from magsplitpy import mag_GSH_funcs
 from magsplitpy import misc_funcs as fn
 from magsplitpy import rotate_splitting_basis as rotate
 
-def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0):
+def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='muHz'):
     # the most commmon grid in radius
     r_grid_common = B_class_object.r
 
@@ -37,17 +37,30 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0):
     delta_omega_mag_ell2_m1 = np.asarray([[0, 0]])
     delta_omega_mag_ell2_m2 = np.asarray([[0, 0]])
 
+    # checking the units in which we want the frequency and splittings
+    # default unit is Hz
+    if(freq_units == 'muHz'):
+        unit_fac = 1e6
+    if(freq_units == 'day_inv'):
+        unit_fac = 3600 * 24
+
     filenames = np.asarray(os.listdir(f'{dir_eigfiles}/'))
 
     # running a loop over all the multiplets we are interested in
     for i in tqdm(range(len(filenames))):
         # desired mode
-        n_str = re.split('[_]+', filenames[i], flags=re.IGNORECASE)[2]
-        ell_str = re.split('[.]+', re.split('[_]+', filenames[i], flags=re.IGNORECASE)[1])[1]
+        # n_str = re.split('[_]+', filenames[i], flags=re.IGNORECASE)[2]
+        # ell_str = re.split('[.]+', re.split('[_]+', filenames[i], flags=re.IGNORECASE)[1])[1]
 
         #---------------------making the kernel----------------------#
         # loading the corresponding file
-        eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        # eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
+        eigfile = h5py.File(f'{dir_eigfiles}/' + filenames[i])
+
+        # desired mode
+        n_str = str(eigfile.attrs['n_pg'])
+        ell_str = str(eigfile.attrs['l'])
+
         # parameters of the star
         R_star = eigfile.attrs['R_star']
         freq_nl = eigfile.attrs['freq'][0]
@@ -66,6 +79,14 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0):
         eignorm = fn.eignorm(Ui_raw, Vi_raw, int(ell_str), r_norm_Rstar, rho)
         Ui_raw = Ui_raw / eignorm
         Vi_raw = Vi_raw / eignorm
+
+        # only upto the last point in radius r = 0.13045820499984798 (where Lisa's RG has non-zero Br)
+        r_Lisamax = 0.13045820499984798
+        r_Lisamax_idx = np.argmin(np.abs(r_norm_Rstar - r_Lisamax))
+        r_norm_Rstar = r_norm_Rstar[:r_Lisamax_idx]
+        rho = rho[:r_Lisamax_idx]
+        Ui_raw = Ui_raw[:r_Lisamax_idx]
+        Vi_raw = Vi_raw[:r_Lisamax_idx]
 
         # converting n and ell back to integers
         n, ell = int(n_str), int(ell_str)
@@ -125,10 +146,10 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0):
 
         # frequency splittings in the unrotated frame in day^{-1}.
         # The 2pi division is to convert from omega to nu.
-        delta_omega_mag = np.diag(Z_mag).real * 3600 * 24 / (2 * np.pi)
+        delta_omega_mag = np.diag(Z_mag).real * unit_fac / (2 * np.pi)
 
         # converting to day^{-1}
-        freq_nl *= 3600 * 24
+        freq_nl *= unit_fac
 
         if(ell == 1):
             delta_omega_mag_ell1_m0 = np.append(delta_omega_mag_ell1_m0, np.array([[freq_nl, delta_omega_mag[1]]]), axis=0)
@@ -180,7 +201,7 @@ def compute_mag_coupling(kern, h, t_arr, r):
 
     return Z
 
-def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2):
+def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2, key='Srijan', freq_units='muHz'):
     fig, ax = plt.subplots(1, 1, figsize=(10,7))
 
     ax.plot(dom_ell1_m1[:,0], dom_ell1_m1[:,1], marker='*', color='black', label='$\ell = 1, m = 1$',linestyle = 'None')
@@ -190,34 +211,106 @@ def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, 
     ax.plot(dom_ell2_m0[:,0], dom_ell2_m0[:,1], marker='o', color='red', label='$\ell = 2, m = 0$',linestyle = 'None')
 
     plt.legend()
+    # ax.set_xlim([0, 9])
+    # ax.set_ylim([0, 0.052])
+    if(freq_units == 'muHz'):
+        ax.set_xlabel('$\\nu_{n,\ell}$ in $\mu$Hz')
+        ax.set_ylabel('$\delta \\nu_{\mathrm{mag}}$ in $\mu$Hz')
+    if(freq_units == 'day_inv'):
+        ax.set_xlabel('$\\nu_{n,\ell}$ in $d^{-1}$')
+        ax.set_ylabel('$\delta \\nu_{\mathrm{mag}}$ in $d^{-1}$')
+
+    ax.set_title(f'{key}')
+    plt.tight_layout()
+
+def plot_splittings_vs_freq_compare(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2, freq_units='muHz'):
+    fig, ax = plt.subplots(1, 1, figsize=(10,7))
+
+    ax.plot(dom_ell1_m1[:,0], dom_ell1_m1[:,1]*100, marker='*', color='black', label='$\ell = 1, m = 1$',linestyle = 'None')
+    ax.plot(dom_ell1_m0[:,0], dom_ell1_m0[:,1]*100, marker='*', color='grey', label='$\ell = 1, m = 0$',linestyle = 'None')
+    ax.plot(dom_ell2_m2[:,0], dom_ell2_m2[:,1]*100, marker='o', color='lime', label='$\ell = 2, m = 2$',linestyle = 'None')
+    ax.plot(dom_ell2_m1[:,0], dom_ell2_m1[:,1]*100, marker='o', color='green', label='$\ell = 2, m = 1$',linestyle = 'None')
+    ax.plot(dom_ell2_m0[:,0], dom_ell2_m0[:,1]*100, marker='o', color='red', label='$\ell = 2, m = 0$',linestyle = 'None')
+
+    plt.legend()
     ax.set_xlim([0, 9])
-    ax.set_ylim([0, 0.052])
-    ax.set_xlabel('$\\nu_{n,\ell}$ in $d^{-1}$')
-    ax.set_ylabel('$\delta \\nu_{\mathrm{mag}}$ in $d^{-1}$')
+    # ax.set_ylim([0, 0.052])
+    if(freq_units == 'muHz'):
+        ax.set_xlabel('$\\nu_{n,\ell}$ in $\mu$Hz')
+    if(freq_units == 'day_inv'):
+        ax.set_xlabel('$\\nu_{n,\ell}$ in $d^{-1}$')
+    ax.set_ylabel('$(\delta \\nu_{\mathrm{mag}} - \delta \\nu_{\mathrm{mag}}^{\mathrm{Lisa}}) / \delta \\nu_{\mathrm{mag}}^{\mathrm{Lisa}} \\times$ 100')
     plt.tight_layout()
 
 if __name__ == "__main__":
-    # directory containing the eigfiles
-    dir_eigfiles = '../Vincent_Eig/mode_files'
+    # path to the directory containing the eigfiles
+    # dir_eigfiles = '../Vincent_Eig/mode_files'
+    dir_eigfiles = '../Lisa_Eig_RG'
+
     # extracting the most common r and rho grid
     r_norm_Rstar, rho = fn.find_mode_r_grid(dir_eigfiles)
+
+    # units in which we want the splittings
+    # currently setup for 'muHz' or 'day_inv'
+    freq_units = 'muHz'
 
     #--------------obtaining the Lorentz-stress GSh components for
     # a given magnetic field-------------------------------------#
     B_field_type = 'Bugnet_2021'
+    B0 = 1e6
     user_knot_num = 50
     sB_max = 1
-    mag_obliquity = 75.   # tilt of the magnetic axis wrt the rotation axis in degrees
+    mag_obliquity = 0.   # tilt of the magnetic axis wrt the rotation axis in degrees
     print("2. Loading 3D magnetic field and decomposing into B-splines in radius.")
     make_B = B_profiles.synthetic_B(r_norm_Rstar, rho=rho, custom_knot_num=user_knot_num,
-                                    sB_max=sB_max, field_type=B_field_type)
+                                    B0=B0, sB_max=sB_max, field_type=B_field_type)
 
     
-    print("6. Computing kernels and splittings in units of day_inv.")
+    print("6. Computing kernels and splittings.")
     delta_omega_mag_ell1_m0, delta_omega_mag_ell1_m1,\
     delta_omega_mag_ell2_m0, delta_omega_mag_ell2_m1, delta_omega_mag_ell2_m2 = delta_nu_mag(make_B, dir_eigfiles,
-                                                                                             mag_obliquity=mag_obliquity)
+                                                                mag_obliquity=mag_obliquity, freq_units=freq_units)
     
     # plotting the frequencies
     plot_splittings_vs_freq(delta_omega_mag_ell1_m0, delta_omega_mag_ell1_m1,\
-                            delta_omega_mag_ell2_m0, delta_omega_mag_ell2_m1, delta_omega_mag_ell2_m2)
+                            delta_omega_mag_ell2_m0, delta_omega_mag_ell2_m1, delta_omega_mag_ell2_m2, freq_units=freq_units)
+
+    '''
+    # comparing with Lisa's splittings (after ordering)
+    delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L = np.load('../Vincent_Eig/Lisa_splittings_ordered_ell1.npy')
+    delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\
+                                                           np.load('../Vincent_Eig/Lisa_splittings_ordered_ell2.npy')
+    '''
+    splittings_Lisa = json.load(open('../tests/Splittings_model56_l1.json'))
+    freq_Srijan = delta_omega_mag_ell1_m0[np.argsort(delta_omega_mag_ell1_m0[:,0]),1]
+    freq_Lisa = np.asarray(splittings_Lisa['shifting_m0'])[np.argsort(np.asarray(splittings_Lisa['f_modes']))]
+    plt.plot(splittings_Lisa['f_modes'], splittings_Lisa['shifting_m0'])
+    percent_diff = 100 * (freq_Srijan - freq_Lisa)/freq_Lisa
+    freq = delta_omega_mag_ell1_m0[np.argsort(delta_omega_mag_ell1_m0[:,0]),0]
+    plt.figure()
+    plt.plot(freq, percent_diff, 'k')
+
+    # delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L = splittings_Lisa['shifting_m0'], splittings_Lisa['shifting_m1']
+    # delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\
+    #                                     delta_omega_mag_ell2_m0, delta_omega_mag_ell2_m1, delta_omega_mag_ell2_m2
+                                                           
+
+    # # plotting the frequencies from Lisa
+    # plot_splittings_vs_freq(delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L,\
+    #                         delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L, key='Lisa')
+
+    # # comparing with Lisa's frequencies
+    # freq_diff_ell1_m0 = np.asarray([delta_omega_mag_ell1_m0[:,0],\
+    #                     (delta_omega_mag_ell1_m0 - delta_omega_mag_ell1_m0_L)[:,1] / delta_omega_mag_ell1_m0_L[:,1]])
+    # freq_diff_ell1_m1 = np.asarray([delta_omega_mag_ell1_m1[:,0],\
+    #                     (delta_omega_mag_ell1_m1 - delta_omega_mag_ell1_m1_L)[:,1] / delta_omega_mag_ell1_m1_L[:,1]])
+    # freq_diff_ell2_m0 = np.asarray([delta_omega_mag_ell2_m0[:,0],\
+    #                     (delta_omega_mag_ell2_m0 - delta_omega_mag_ell2_m0_L)[:,1] / delta_omega_mag_ell2_m0_L[:,1]])
+    # freq_diff_ell2_m1 = np.asarray([delta_omega_mag_ell2_m1[:,0],\
+    #                     (delta_omega_mag_ell2_m1 - delta_omega_mag_ell2_m1_L)[:,1] / delta_omega_mag_ell2_m1_L[:,1]])
+    # freq_diff_ell2_m2 = np.asarray([delta_omega_mag_ell2_m2[:,0],\
+    #                     (delta_omega_mag_ell2_m2 - delta_omega_mag_ell2_m2_L)[:,1] / delta_omega_mag_ell2_m2_L[:,1]])
+
+    # plot_splittings_vs_freq_compare(freq_diff_ell1_m0.T, freq_diff_ell1_m1.T, freq_diff_ell2_m0.T, freq_diff_ell2_m1.T, freq_diff_ell2_m2.T)
+
+    

@@ -27,6 +27,15 @@ class synthetic_B:
         # grid in radius
         self.r = r
 
+        # rho is only needed for the profile of Bugnet 2021
+        self.rho = rho
+
+        # truncating at Lisa's max index where Br is non-zero
+        r_Lisamax = 0.13045820499984798
+        self.r_Lisamax_idx = np.argmin(np.abs(self.r - r_Lisamax))
+        self.r = self.r[:self.r_Lisamax_idx]
+        self.rho = self.rho[:self.r_Lisamax_idx]
+
         # number of points in theta and phi directions
         self.Ntheta, self.Nphi = Ntheta, Nphi
         # constructing the theta and phi grids
@@ -38,24 +47,22 @@ class synthetic_B:
         # whether to also return the GSH coefficients of the field
         self.get_B_GSH = get_B_GSH
 
-        # rho is only needed for the profile of Bugnet 2021
-        self.rho = None
-
         # initializing splines in radius
         self.bsp_basis = None
         self.knot_ind_shell = None  
         self.knot_locs = None
         self.rshell = None  # this is supposed to be the radius within which we have high density of knots
-        self.create_bsplines(custom_knot_num) 
-        self.num_knots = self.bsp_basis.shape[0]
+        # self.create_bsplines(custom_knot_num) 
+        # self.num_knots = self.bsp_basis.shape[0]
 
         # the field type to compute
         self.field_type = field_type
         self.B0 = B0
 
         self.B = self.get_B()
-        self.c_arr = self.get_radial_spline_coefs(self.B)
-        self.num_knots = self.c_arr.shape[-1]
+
+        # self.c_arr = self.get_radial_spline_coefs(self.B)
+        # self.num_knots = self.c_arr.shape[-1]
 
         # the maximum angular degree of magnetic field we are interested in
         self.sB_max = sB_max
@@ -67,7 +74,7 @@ class synthetic_B:
 
     def get_B(self):
         if(self.field_type == 'Bugnet_2021'):
-            return self.make_Bugnet2021_field(self.r, rho=self.rho, B0=self.B0)
+            return self.make_Bugnet2021_field()
 
     def dipolar_B(self):
         """
@@ -168,7 +175,7 @@ class synthetic_B:
             return B
 
     
-    def make_Bugnet2021_field(self, r, rho, B0=1.0, toreturn1D=False):
+    def make_Bugnet2021_field(self, toreturn1D=False):
         '''
         lam   = 2.80
         R_rad = 0.136391
@@ -256,11 +263,14 @@ class synthetic_B:
         Br_array = Br_array/np.max(Br_array)
         '''
 
-        Bugnet_field_data = json.load(open('../tests/Field.json'))
+        Bugnet_field_data = json.load(open('../tests/Field_RG.json'))
         r, Br_array, Bt_array, Bp_array = np.asarray(Bugnet_field_data['r']),\
-                                          B0 * np.asarray(Bugnet_field_data['Br']),\
-                                          B0 * np.asarray(Bugnet_field_data['Bt']),\
-                                          B0 * np.asarray(Bugnet_field_data['Bp'])
+                                          self.B0 * np.asarray(Bugnet_field_data['Br']),\
+                                          self.B0 * np.asarray(Bugnet_field_data['Bt']),\
+                                          self.B0 * np.asarray(Bugnet_field_data['Bp'])
+
+        # converting to normalized radius
+        r = r / r[-1]
 
         # interpolating B to the common r grid if not on the same grid in radius
         if(len(self.r) != len(r)):
@@ -296,8 +306,9 @@ class synthetic_B:
     def create_bsplines(self, custom_knot_num, rshell=2e-2):
         rmin, rmax = self.r.min(), self.r.max()
         self.rshell = rshell
-        total_knot_num = int(np.round((rmax-rmin)/(1 - self.rshell))) \
-                         * custom_knot_num
+        # total_knot_num = int(np.round((rmax-rmin)/(1 - self.rshell))) \
+        #                  * custom_knot_num
+        total_knot_num = custom_knot_num
         total_knot_num += 4 - total_knot_num%4 - 1
 
         num_skip = len(self.r)//total_knot_num
@@ -310,7 +321,7 @@ class synthetic_B:
 
         knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_shell],
                                knot_locs_uniq[self.knot_ind_shell:]))
-        self.knot_locs = knot_locs
+        # self.knot_locs = knot_locs
         # print(f"knotlocs shape = {knot_locs.shape}")
 
         #----------ORIGINAL SPLINE CONFIGURATION FROM HELIOSEISMOLOGY-------------------#
@@ -338,7 +349,9 @@ class synthetic_B:
         #-----------SPLINE CONFIGURATION WITH NO BOUNDARY CONSIDERATION IN BETWEEN-------------#
         vercof1, dvercof1 = eval_polynomial(self.r, [rmin, rmax],
                                             1, types= ['TOP','BOTTOM'])
+
         vercof2, dvercof2 = eval_vbspl(self.r, knot_locs_uniq)
+        # vercof3, dvercof3 = eval_vbspl(self.r, knot_locs_uniq[self.knot_ind_shell:])
 
         idx = np.where(vercof1[:, -1] > 0)[0][0]
         vercof1[idx, -1] = 0.0                                         
@@ -351,8 +364,10 @@ class synthetic_B:
         
         self.knot_ind_shell = self.knot_ind_shell + 4
 
-        knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_shell+1],
-                               knot_locs_uniq[self.knot_ind_shell:]))
+        # knot_locs = np.hstack((knot_locs_uniq[:self.knot_ind_shell+1],
+        #                        knot_locs_uniq[self.knot_ind_shell:]))
+        knot_locs = knot_locs_uniq
+
         self.knot_locs = knot_locs
 
         # storing the analytically derived B-splines and it first derivatives
@@ -424,8 +439,11 @@ class synthetic_B:
 
         print("3. Extracting the VSH coefficients for the splined B.")
         # extracting the GSH components of the generic 3D B field one radial slice at a time
-        for knot_ind in tqdm(range(self.num_knots)):
-            Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(self.c_arr[:,:,:,knot_ind],
+        # for knot_ind in tqdm(range(self.num_knots)):
+        for r_idx in tqdm(range(self.r_Lisamax_idx)):
+            # Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(self.c_arr[:,:,:,knot_ind],
+            #                                                 nmax=self.sB_max,mmax=self.sB_max)
+            Bcoefs_numerical = mag_GSH_funcs.get_B_GSHcoeffs_from_B(self.B[:,:,:,r_idx],
                                                             nmax=self.sB_max,mmax=self.sB_max)
             B_j_mu_st.append(Bcoefs_numerical)
 
@@ -434,7 +452,8 @@ class synthetic_B:
 
         #converting back to radius in grid
         print("4. Reconstructing the B_mu_st_r from the spline coefficients.")
-        B_mu_st_r = self.reconstruct_field_from_spline(self.B_mu_st_j)
+        # B_mu_st_r = self.reconstruct_field_from_spline(self.B_mu_st_j)
+        B_mu_st_r = self.B_mu_st_j
 
         # getting the BB GSH components from the B GSH components
         print("5. Computing h_mu_nu_st_r.")
@@ -445,26 +464,28 @@ class synthetic_B:
 
 
 if __name__ == "__main__":
-    make_B = synthetic_B()
-
     # reading a sample density profile
     r, rho = np.loadtxt('../sample_eigenfunctions/r_rho.txt').T
-    B_Bugnet_1D = make_B.make_Bugnet2021_field(r/r.max(), rho, stretch_radius=True, toreturn1D=True)
+    r = r/r[-1]
+
+    B0 = 1e6
+    make_B = synthetic_B(r, rho=rho, B0=B0, custom_knot_num=50)
+    B_Bugnet_1D = make_B.make_Bugnet2021_field(toreturn1D=True)
 
     # plotting the field
     make_B.plot_synthetic_B_field(B_Bugnet_1D)
 
-    B_Bugnet_3D = make_B.make_Bugnet2021_field(r/r.max(), rho, stretch_radius=True)
+    B_Bugnet_3D = make_B.make_Bugnet2021_field()
 
     # extracting the spline coefficients of the B-field for faster B_st(r) computation
-    make_B.create_bsplines(50)
-    c_arr = make_B.get_radial_spline_coefs(B_Bugnet_3D)
+    # make_B.create_bsplines(50)
+    # c_arr = make_B.get_radial_spline_coefs(B_Bugnet_3D)
 
     # plotting to see how the B-spline basis looks like
     make_B.plot_spline_basis()
 
     # reconstructing B
-    B_rec = make_B.reconstruct_field_from_spline(c_arr)
+    B_rec = make_B.reconstruct_field_from_spline(make_B.c_arr)
 
     # plotting the reconstructed B
     make_B.compare_spline_efficiency(B_rec, B_Bugnet_3D)
