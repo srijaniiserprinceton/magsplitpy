@@ -80,6 +80,7 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
         Ui_raw = Ui_raw / eignorm
         Vi_raw = Vi_raw / eignorm
 
+        '''
         # only upto the last point in radius r = 0.13045820499984798 (where Lisa's RG has non-zero Br)
         r_Lisamax = 0.13045820499984798
         r_Lisamax_idx = np.argmin(np.abs(r_norm_Rstar - r_Lisamax))
@@ -87,6 +88,7 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
         rho = rho[:r_Lisamax_idx]
         Ui_raw = Ui_raw[:r_Lisamax_idx]
         Vi_raw = Vi_raw[:r_Lisamax_idx]
+        '''
 
         # converting n and ell back to integers
         n, ell = int(n_str), int(ell_str)
@@ -281,14 +283,20 @@ if __name__ == "__main__":
     delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\
                                                            np.load('../Vincent_Eig/Lisa_splittings_ordered_ell2.npy')
     '''
-    splittings_Lisa = json.load(open('../tests/Splittings_model56_l1.json'))
+    B_key = 'Bp_only_new'
+    splittings_Lisa = json.load(open(f'../tests/Splittings_model56_l1_{B_key}.json'))
     freq_Srijan = delta_omega_mag_ell1_m0[np.argsort(delta_omega_mag_ell1_m0[:,0]),1]
     freq_Lisa = np.asarray(splittings_Lisa['shifting_m0'])[np.argsort(np.asarray(splittings_Lisa['f_modes']))]
     plt.plot(splittings_Lisa['f_modes'], splittings_Lisa['shifting_m0'])
+    plt.savefig(f'../plots/{B_key}_splittings.pdf')
+
+    # plotting the percent error to compare the two methods
     percent_diff = 100 * (freq_Srijan - freq_Lisa)/freq_Lisa
     freq = delta_omega_mag_ell1_m0[np.argsort(delta_omega_mag_ell1_m0[:,0]),0]
     plt.figure()
     plt.plot(freq, percent_diff, 'k')
+    plt.title(f'{B_key}')
+    plt.savefig(f'../plots/{B_key}_percent_diff.pdf')
 
     # delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L = splittings_Lisa['shifting_m0'], splittings_Lisa['shifting_m1']
     # delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\
