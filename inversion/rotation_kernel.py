@@ -109,37 +109,95 @@ class rot_kern:
             U2, V2 = eigfile2['xi_r']['re'][()], eigfile2['xi_h']['re'][()]
 
             # interpolating the two eigenfunctions on the same grid
-            # using the eigenfunction with larger number of grids as final mesh in r
-            if(self.self_coupling or (len(r1) == len(r2))):
-                r = r1
-                rho = rho1
-                pass
+            # # using the eigenfunction with larger number of grids as final mesh in r
+            # if(self.self_coupling or (len(r1) == len(r2))):
+            #     r = r1
+            #     rho = rho1
+            #     pass
 
-            elif(len(r1) > len(r2)):
-                r = r1
-                rho = rho1
-                # interpolate the second set of eigenfunctions
-                U2 = np.interp(r1, r2, U2)
-                V2 = np.interp(r1, r2, V2)
+            # elif(len(r1) > len(r2)):
+            #     r = r1
+            #     rho = rho1
+            #     # interpolate the second set of eigenfunctions
+            #     U2 = np.interp(r1, r2, U2)
+            #     V2 = np.interp(r1, r2, V2)
 
-            else:
-                r = r2
-                rho = rho2
-                # interpolate the first set of eigenfunctions
-                U1 = np.interp(r2, r1, U1)
-                V1 = np.interp(r2, r1, V1)
+            # else:
+            #     r = r2
+            #     rho = rho2
+            #     # interpolate the first set of eigenfunctions
+            #     U1 = np.interp(r2, r1, U1)
+            #     V1 = np.interp(r2, r1, V1)
 
-            # checking if we need interpolation of B-spline basis
-            if(len(r) == len(self.r_bsp_basis_rot)):
-                bsp_basis_thismode = self.bsp_basis_rot
-            else:
-                bsp_basis_thismode = self.interp_splines(r)
+            # # checking if we need interpolation of B-spline basis
+            # if(len(r) == len(self.r_bsp_basis_rot)):
+            #     bsp_basis_thismode = self.bsp_basis_rot
+            # else:
+            #     bsp_basis_thismode = self.interp_splines(r)
 
             # normalizing Ui and Vi
-            eignorm1 = fn.eignorm(U1, V1, ell1, r, rho)
+            eignorm1 = fn.eignorm(U1, V1, ell1, r1, rho1)
             U1, V1 = U1 / eignorm1, V1 / eignorm1
-            eignorm2 = fn.eignorm(U2, V2, ell2, r, rho)
+            eignorm2 = fn.eignorm(U2, V2, ell2, r2, rho2)
             U2, V2 = U2 / eignorm2, V2 / eignorm2
+
+            # interpolating the eigenfunctions onto the B-spline grid
+            U1_bsp = np.interp(self.r_bsp_basis_rot, r1, U1)
+            V1_bsp = np.interp(self.r_bsp_basis_rot, r1, V1)
+            rho1 = np.interp(self.r_bsp_basis_rot, r1, rho1)
+            U2_bsp = np.interp(self.r_bsp_basis_rot, r2, U2)
+            V2_bsp = np.interp(self.r_bsp_basis_rot, r2, V2)
+            rho2 = np.interp(self.r_bsp_basis_rot, r2, rho2)
+
+            r = self.r_bsp_basis_rot
+
+            print(r.shape, U1.shape, V1.shape)
+
+            # eignorm1 = fn.eignorm(U1_bsp, V1_bsp, ell1, r, rho1)
+            # U1_bsp, V1_bsp = U1_bsp / eignorm1, V1_bsp / eignorm1
+            # eignorm2 = fn.eignorm(U2_bsp, V2_bsp, ell2, r, rho2)
+            # U2_bsp, V2_bsp = U2_bsp / eignorm2, V2_bsp / eignorm2
+
+            '''
+            # projecting the eigenfunctions onto the bspline grid
+            # this can only be done for low enough radial orders (less oscillatory e-funcs)
+            # extracting coefficients first
+            U1_coefs = self.get_radial_spline_coefs(U1)
+            V1_coefs = self.get_radial_spline_coefs(V1)
+            rho1_coefs = self.get_radial_spline_coefs(rho1)
+            U2_coefs = self.get_radial_spline_coefs(U2)
+            V2_coefs = self.get_radial_spline_coefs(V2)
+            rho2_coefs = self.get_radial_spline_coefs(rho2)
+
+            # reconstructing the eigenfunctions onto the Bspline grid
+            U1_rec = self.reconstruct_field_from_spline(U1_coefs)
+            V1_rec = self.reconstruct_field_from_spline(V1_coefs)
+            rho_rec = self.reconstruct_field_from_spline(rho1_coefs)
+            U2_rec = self.reconstruct_field_from_spline(U2_coefs)
+            V2_rec = self.reconstruct_field_from_spline(V2_coefs)
+            '''
+
+            rho = rho1
+
+            # plotting to see if the reconstruction is accurate enough
+            plt.figure()
+            plt.plot(r1, U1, alpha=0.4)
+            plt.plot(self.r_bsp_basis_rot, U1_bsp, '--')
+            plt.plot(r2, V1, alpha=0.4)
+            plt.plot(self.r_bsp_basis_rot, V1_bsp, '--')
+            plt.tight_layout()
+            plt.savefig(f'./kernel_interp_plots/{n1}_{ell1}_{n2}_{ell2}.png')
+            plt.close()
+            # plt.plot(r, U2, alpha=0.4)
+            # plt.plot(self.r_bsp_basis_rot, U2_rec, '--')
+            # plt.plot(r, V2, alpha=0.4)
+            # plt.plot(self.r_bsp_basis_rot, V2_rec, '--')
+            
+            # using the spline reconstructed eigenfunctions to create kernels
+            U1 = U1_bsp
+            V1 = V1_bsp
+            U2 = U2_bsp
+            V2 = V2_bsp
 
             Tsr_nl = self.compute_Tsr(r, ell1, ell2, U1, V1, U2, V2)
             rho_Tsr_nl = Tsr_nl * (rho * r**2)[NAX,:]
@@ -153,12 +211,19 @@ class rot_kern:
 
             prod_gammas = fn.gam(ell1) * fn.gam(ell2) # * fn.gam(self.s_arr), not using for Omega
             prefactors = wigvals * ((-1)**(np.abs(m)) * 4*np.pi * prod_gammas)[:,NAX]
-
+            
+            plt.figure()
+            for i in range(self.bsp_basis_rot.shape[0]):
+                plt.plot(self.r_bsp_basis_rot, self.bsp_basis_rot[i])
+            plt.tight_layout()
+            plt.savefig(f'./bsp_basis_plots/{self.bsp_basis_rot.shape[0]}.png')
+            plt.close()
             # multiplying the various other factors.
             # condensing the r dimension to knots 
             if(self.return_splined_kernel):
                 # K shape is now (s x Nparams)
-                K = simps(rho_Tsr_nl[:,NAX,:] * bsp_basis_thismode[NAX,:,:], axis=2, x=r)
+                # K = simps(rho_Tsr_nl[:,NAX,:] * bsp_basis_thismode[NAX,:,:], axis=2, x=r)
+                K = simps(rho_Tsr_nl[:,NAX,:] * self.bsp_basis_rot[NAX,:,:], axis=2, x=self.r_bsp_basis_rot)
             else:
                 # K shape is now (s x r)
                 K = rho_Tsr_nl
@@ -254,6 +319,23 @@ class rot_kern:
         # making them of shape (n_basis, r)
         self.bsp_basis_rot = bsp_basis_rot.T
 
+    def get_radial_spline_coefs(self, f):
+        # creating the carr corresponding to the DPT using custom knots
+        Gtg = self.bsp_basis_rot @ self.bsp_basis_rot.T   # shape(n_basis, n_basis)
+
+        print(Gtg.shape, f.shape, self.bsp_basis_rot.shape)
+
+        # computing the coefficient arrays (c_arr)
+        c_arr = np.tensordot(np.tensordot(f, self.bsp_basis_rot, axes=([-1],[-1])),
+                             np.linalg.inv(Gtg), axes=([-1],[-1]))
+
+        # these coefficient array is of shape (3 x theta x phi x knots)
+        return c_arr
+
+    def reconstruct_field_from_spline(self, c_arr):
+        f_rec = c_arr @ self.bsp_basis_rot
+        return f_rec
+
     def interp_splines(self, r_new):
         bsp_basis_new = np.zeros((len(self.bsp_basis_rot), len(r_new)))
         for i in range(len(self.bsp_basis_rot)):
@@ -275,8 +357,19 @@ if __name__ == '__main__':
     return_splined_kernel = True
 
     # makes the rotation kernels (self-coupling by default)
-    rotation_kerns = rot_kern(dir_eigfiles, mode_nl1_arr, custom_knot_num = 6,
+    rotation_kerns = rot_kern(dir_eigfiles, mode_nl1_arr, custom_knot_num = 5,
                               return_splined_kernel=return_splined_kernel)
+
+    key_str = []
+    for key in rotation_kerns.kern_dict.keys():
+        key_str.append(key)
+
+    key_str = np.asarray(key_str)
+
+    K_total = rotation_kerns.kern_dict[key_str[0]]['kernel'].T
+
+    for i in range(1, len(key_str)):
+        K_total = np.column_stack((K_total, rotation_kerns.kern_dict[key_str[i]]['kernel'].T))
 
     # # plotting the kernels
     # color = np.array(['red', 'orange', 'blue', 'cyan'])
