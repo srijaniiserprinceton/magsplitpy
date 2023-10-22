@@ -1,7 +1,6 @@
 __pycache__/*
 *.pyc
 *.pdf
-*.png
 *.gif
 *.txt
 docs/build/*
