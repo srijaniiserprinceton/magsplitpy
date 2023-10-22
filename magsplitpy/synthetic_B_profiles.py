@@ -473,6 +473,7 @@ if __name__ == "__main__":
     # plotting the reconstructed B and the original field (specific slices in theta and phi)
     make_B.compare_spline_efficiency(B_rec, make_B.B)
 
+    '''
     # reading the raw Br_array from Lisa's file
     Bugnet_field_data = json.load(open('../tests/Field_Br_only.json'))
     Br_array = B0 * np.asarray(Bugnet_field_data['Br'])
@@ -484,3 +485,4 @@ if __name__ == "__main__":
     print("Spline accuracy:")
     print("----------------")
     print('Percent offset assuming constant kernels of Br^2: ', percent_offset)
+    '''
