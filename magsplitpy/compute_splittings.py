@@ -20,6 +20,24 @@ from magsplitpy import misc_funcs as fn
 from magsplitpy import rotate_splitting_basis as rotate
 
 def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='muHz'):
+    """
+    Front-end function to calculate freqeuncy splittings.
+
+    Paramters:
+    ----------
+    B_class_object: object of type synthetic_B from script synthetic_B_profiles
+                    Contains miscellaneous information about the synthetic model
+                    magnetic field.
+    dir_eigfiles: str
+                  Path to directory containing the eigenfunctions for model star.
+    mag_obliquity: float, optional
+                   Relative inclination of the axisymmetric magnetic field
+                   with respect to rotation axis. Uses Loi 2021 formula.
+                   Default value is set at 0.0 (aligned magnetic and rotation axis).
+    freq_units: str, optional
+                Units in which to output frequency splittings. Currently setup
+                for microhertz 'muHz' and day inverse 'day_inv'. Default is 'muHz'.
+    """
     # the most commmon grid in radius
     r_grid_common = B_class_object.r
 
@@ -48,16 +66,12 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
 
     # running a loop over all the multiplets we are interested in
     for i in tqdm(range(len(filenames))):
-        # desired mode
-        # n_str = re.split('[_]+', filenames[i], flags=re.IGNORECASE)[2]
-        # ell_str = re.split('[.]+', re.split('[_]+', filenames[i], flags=re.IGNORECASE)[1])[1]
-
         #---------------------making the kernel----------------------#
         # loading the corresponding file
         # eigfile = h5py.File(f'{dir_eigfiles}/mode_h.{ell_str}_{n_str}_hz.h5')
         eigfile = h5py.File(f'{dir_eigfiles}/' + filenames[i])
 
-        # desired mode
+        # desired mode (read from metadata or GYRE file)
         n_str = str(eigfile.attrs['n_pg'])
         ell_str = str(eigfile.attrs['l'])
 
@@ -80,16 +94,6 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
         Ui_raw = Ui_raw / eignorm
         Vi_raw = Vi_raw / eignorm
 
-        '''
-        # only upto the last point in radius r = 0.13045820499984798 (where Lisa's RG has non-zero Br)
-        r_Lisamax = 0.13045820499984798
-        r_Lisamax_idx = np.argmin(np.abs(r_norm_Rstar - r_Lisamax))
-        r_norm_Rstar = r_norm_Rstar[:r_Lisamax_idx]
-        rho = rho[:r_Lisamax_idx]
-        Ui_raw = Ui_raw[:r_Lisamax_idx]
-        Vi_raw = Vi_raw[:r_Lisamax_idx]
-        '''
-
         # converting n and ell back to integers
         n, ell = int(n_str), int(ell_str)
 
@@ -101,6 +105,7 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
 
         # calling the generic kernel computation
         kern = make_kern_s.ret_kerns(n, ell, np.arange(-ell,ell+1), Ui_raw, Vi_raw)
+
         # calling the axisymmetric field kernel computation
         # kern = make_kern_s.ret_kerns_axis_symm(n, ell, np.arange(-ell,ell+1), Ui_raw, Vi_raw)
 
@@ -144,6 +149,7 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
         # rotating by "mag_obliquity" degrees
         D = rotate.Wigner_d_matrix(ell, mag_obliquity * np.pi / 180.)
 
+        # new rotated supermatrix as per Eqn(22) of Loi 2021
         Z_mag = D @ Z_mag @ D.T
 
         # frequency splittings in the unrotated frame in day^{-1}.
@@ -174,6 +180,26 @@ def delta_nu_mag(B_class_object, dir_eigfiles, mag_obliquity=0.0, freq_units='mu
 
 
 def compute_mag_coupling(kern, h, t_arr, r):
+    """
+    Function that computes the coupling matrix from the kernel,
+    and Lorentz-stress tensor [Eqn(18) of Das et al 2020].
+
+    Parameters:
+    -----------
+    kern: array-like of floats, shape (mu,nu,sBB,m,m_,r)
+          Lorentz-stress kernels computed in delta_mu_nu()
+    h: array-like of floats, shape (mu,nu,s,t,r)
+       Lorentz-stress tensor in the GSH form
+    t_arr: array-like of ints, shape 2*sBB_max + 1
+           Contains the array of (-sBB_max, sBB_max).
+    r: array-like of floats, shape (r,)
+       Radial grid to integrate over.
+
+    Returns:
+    --------
+    Z: array-like of comples128, shape m x m_
+       Submatrix for the specific multiplet for magnetic perturbation.
+    """
     # reading off the m array from the dimension of kern
     m_max_kern = kern.shape[3]//2
     m = np.arange(-m_max_kern, m_max_kern + 1)
@@ -203,7 +229,8 @@ def compute_mag_coupling(kern, h, t_arr, r):
 
     return Z
 
-def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2, key='Srijan', freq_units='muHz'):
+# function to plot the frequency splittings of different modes as a function of unperturbed frequencies
+def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2, freq_units='muHz'):
     fig, ax = plt.subplots(1, 1, figsize=(10,7))
 
     ax.plot(dom_ell1_m1[:,0], dom_ell1_m1[:,1], marker='*', color='black', label='$\ell = 1, m = 1$',linestyle = 'None')
@@ -222,9 +249,9 @@ def plot_splittings_vs_freq(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, 
         ax.set_xlabel('$\\nu_{n,\ell}$ in $d^{-1}$')
         ax.set_ylabel('$\delta \\nu_{\mathrm{mag}}$ in $d^{-1}$')
 
-    ax.set_title(f'{key}')
     plt.tight_layout()
 
+# function originally written to compare the difference in splitting between Das and Bugnet codes
 def plot_splittings_vs_freq_compare(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_ell2_m1, dom_ell2_m2, freq_units='muHz'):
     fig, ax = plt.subplots(1, 1, figsize=(10,7))
 
@@ -246,23 +273,22 @@ def plot_splittings_vs_freq_compare(dom_ell1_m0, dom_ell1_m1, dom_ell2_m0, dom_e
 
 if __name__ == "__main__":
     # path to the directory containing the eigfiles
-    # dir_eigfiles = '../Vincent_Eig/mode_files'
-    dir_eigfiles = '../Lisa_Eig_RG'
+    dir_eigfiles = '../Vincent_Eig/mode_files'
 
     # extracting the most common r and rho grid
     r_norm_Rstar, rho = fn.find_mode_r_grid(dir_eigfiles)
 
     # units in which we want the splittings
     # currently setup for 'muHz' or 'day_inv'
-    freq_units = 'muHz'
+    freq_units = 'day_inv'
 
     #--------------obtaining the Lorentz-stress GSh components for
     # a given magnetic field-------------------------------------#
     B_field_type = 'Bugnet_2021'
-    B0 = 1e6
+    B0 = 50000
     user_knot_num = 50
     sB_max = 1
-    mag_obliquity = 0.   # tilt of the magnetic axis wrt the rotation axis in degrees
+    mag_obliquity = 75.0    # tilt of the magnetic axis wrt the rotation axis in degrees
     print("2. Loading 3D magnetic field and decomposing into B-splines in radius.")
     make_B = B_profiles.synthetic_B(r_norm_Rstar, rho=rho, custom_knot_num=user_knot_num,
                                     B0=B0, sB_max=sB_max, field_type=B_field_type)
@@ -277,12 +303,16 @@ if __name__ == "__main__":
     plot_splittings_vs_freq(delta_omega_mag_ell1_m0, delta_omega_mag_ell1_m1,\
                             delta_omega_mag_ell2_m0, delta_omega_mag_ell2_m1, delta_omega_mag_ell2_m2, freq_units=freq_units)
 
+    
+    #------------------------------main template code ends here---------------------------#
+
+
     '''
     # comparing with Lisa's splittings (after ordering)
     delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L = np.load('../Vincent_Eig/Lisa_splittings_ordered_ell1.npy')
     delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\
                                                            np.load('../Vincent_Eig/Lisa_splittings_ordered_ell2.npy')
-    '''
+    
     B_key = 'Bp_only_new'
     splittings_Lisa = json.load(open(f'../tests/Splittings_model56_l1_{B_key}.json'))
     freq_Srijan = delta_omega_mag_ell1_m0[np.argsort(delta_omega_mag_ell1_m0[:,0]),1]
@@ -297,6 +327,7 @@ if __name__ == "__main__":
     plt.plot(freq, percent_diff, 'k')
     plt.title(f'{B_key}')
     plt.savefig(f'../plots/{B_key}_percent_diff.pdf')
+    '''
 
     # delta_omega_mag_ell1_m0_L, delta_omega_mag_ell1_m1_L = splittings_Lisa['shifting_m0'], splittings_Lisa['shifting_m1']
     # delta_omega_mag_ell2_m0_L, delta_omega_mag_ell2_m1_L, delta_omega_mag_ell2_m2_L =\

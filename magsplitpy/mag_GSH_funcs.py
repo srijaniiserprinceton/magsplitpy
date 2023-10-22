@@ -52,6 +52,54 @@ def get_B_GSHcoeffs_from_B(B, nmax=5, mmax=5):
     # returning B^0_st_r(r), 
     return B_mu_st_r_ret
  
+
+# extracting the VSH coefficients corresponding to a general 3D magnetic field
+def get_B_VSHcoeffs_from_B(B, nmax=5, mmax=5):
+    """
+    Given a 3D magnetic field B on a spherical surface with all the three vector components 
+    $(B_r, B_{\\theta}, B_{\phi})$, this function calculates the corresponding
+    VSH coefficients. 
+
+    Parameters:
+    -----------
+    B : array_like of floats, shape (Ntheta x Nphi)
+        3D magnetic field on a spherical shell with all the vector components.
+
+    nmax : int, optional
+           The maximum angular degree of GSH transform.
+
+    mmax : int, optional
+           The maximum azimuthal order of GSH transform.
+
+    Returns:
+    --------
+    B_mu_st_r_ret : ndarray, shape (3, nmax, mmax)
+                Array of VSH cofficients for each spherical shell. Retains
+                the same number of points in radius.
+    """
+    Br, Btheta, Bphi = B[0], B[1], B[2]
+    # converting the Br(r,theta,phi) field to B^0_st(r)
+    B0_st_r = spht.field2coef(np.array([Br]), ellmax=nmax, mmax=mmax)
+
+    # converting the Btheta(r,theta,phi) and Bphi(r,theta,phi) to
+    # Bv_{st}(r) and Bw_{st}(r) of the Jackson convention
+    Bvec = np.array([Btheta, Bphi])
+    B_Jackson_coefs = spht.field2coef(Bvec, ellmax=nmax, mmax=mmax)
+    # B_Jackson_coefs = spht.field2coef(Bvec)
+    BvJ_st_r, BwJ_st_r = B_Jackson_coefs.scoef1, B_Jackson_coefs.scoef2
+
+    # converting to the DT convention first before converting to GSH components
+    BvDT_st_r, BwDT_st_r = spht.convert_coeffs_Jackson2DT(BvJ_st_r, BwJ_st_r)
+
+    # creating VSH coefs array
+    Bcoefs_VSH = np.array([B0_st_r._array_2d_repr(),
+                           BvDT_st_r._array_2d_repr(),
+                           BwDT_st_r._array_2d_repr()])
+
+    # returning VSH coefs, 
+    return Bcoefs_VSH
+
+
 # using the GSH coefficients of B to build GSH coefficients of BB
 def make_BB_GSH_from_B_GSH(B_mu_st_obj, sB_max=5):
     """

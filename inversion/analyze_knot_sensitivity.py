@@ -10,11 +10,14 @@ rc('font', **font)
 # location of the eigenfunction files
 dir_eigfiles = '../Vincent_Eig/mode_files'
 
-# modes we want to use for rotation inversion
-mode_nl1_arr = np.array([[2, 2],
-                            [-1, 2],
-                            [-2, 2],
-                            [4, 1]])
+# # modes we want to use for rotation inversion
+# mode_nl1_arr = np.array([[2, 2],
+#                          [-1, 2],
+#                          [-2, 2]])
+
+mode_nl1_arr = np.array([[-1, 2],
+                         [0, 2],
+                         [3, 2]])
 
 # mode_nl1_arr = np.array([[2, 2],
 #                          [4, 1]])
@@ -31,7 +34,7 @@ for fidx, num_knots in enumerate(np.arange(0,1,4)):
 
     # makes the rotation kernels (self-coupling by default)
     rotation_kerns = rotation_kernel.rot_kern(dir_eigfiles, mode_nl1_arr, custom_knot_num = 6+num_knots,
-                                return_splined_kernel=return_splined_kernel)
+                                              return_splined_kernel=return_splined_kernel)
 
     key_str = []
     for key in rotation_kerns.kern_dict.keys():

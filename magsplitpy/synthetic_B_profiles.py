@@ -265,7 +265,9 @@ class synthetic_B:
         '''
 
         # Bugnet_field_data = json.load(open('../tests/Field_RG.json'))
-        Bugnet_field_data = json.load(open('../tests/Field_Br_only.json'))
+        # Bugnet_field_data = json.load(open('../tests/Field_BC.json'))
+        Bugnet_field_data = json.load(open('../tests/Field_BC.json'))
+        # Bugnet_field_data = json.load(open('../tests/Field_Br_only.json'))
         r, Br_array, Bt_array, Bp_array = np.asarray(Bugnet_field_data['r']),\
                                           self.B0 * np.asarray(Bugnet_field_data['Br']),\
                                           self.B0 * np.asarray(Bugnet_field_data['Bt']),\
@@ -352,10 +354,10 @@ class synthetic_B:
         #                              vercof2[:, 1:-1],
         #                              vercof1[:, 0]))
 
-        # bsp_basis = vercof2
-        bsp_basis = np.zeros((len(self.r), 2))
-        bsp_basis[:1366, 0] = 1.0
-        bsp_basis[1366:, 1] = 1.0
+        bsp_basis = vercof2
+        # bsp_basis = np.zeros((len(self.r), 2))
+        # bsp_basis[:1366, 0] = 1.0
+        # bsp_basis[1366:, 1] = 1.0
 
         self.knot_locs = knot_locs_uniq
 
