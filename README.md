@@ -1,22 +1,40 @@
 # magsplitpy
-Repository to calculate frequency splitting in stars due to general 3D magnetism
+Repository to calculate frequency splitting in stars due to general 3D magnetism.
 
 ## Installation
-This repository is intended to be used as a package in your current working environment. If you do not already have a patent environment, I would recommend installing the `environment.yml` file to get the environment with default name `astero` (you may choose to name it something else by changing the field "name" in the `environment.yml` file.
+This repository is intended to be used as a package in your current working environment. If you do not already have a patent environment, I would recommend installing the `environment.yml` file to get the environment with default name `astero`. You may choose to name it something else by changing the field "name" in the `environment.yml` file.
 
-Assuming you are going to setup `astero` as your working environment, you can run the following bash commands to (a) create the environment, (b) activate the environment, and (c) install the package `magsplitpy` in the `astero` environment. This ensures you have the same package dependencies and almost a clone of what the developer has, thereby ensuring a smooth launching of the scripts.
+Assuming you are going to setup `astero` as your working environment, we will go over the installation in four steps: (a) creating the environment, (b) activating the environment, and (c) installing the package `avni` which is used by `magsplitpy` to obtain B-spline basis functions, and (d) installing the package `magsplitpy` in the `astero` environment. This ensures you have the same package dependencies and almost a clone of what the developer has, thereby ensuring a smooth launching of the scripts.
+
+It is recommended to have `mamba` installed in your `base` environment. If you don't already have `mamba`, go to the bottom of this page to see the installation directions and come back here once you have successfully installed it. Next, we create and activate `astero` as follows.
 ```
 # Create the conda environment and install dependencies
-conda env create -f environment.yml
+mamba env create --file environment.yml
 
 # Activate the conda environment astero
 conda activate astero
-
-# Install magsplitpy
+```
+If you choose to not use `astero` and/or use your own patent environment, checkout the packages in the `environment.yml` file and install them manually in your environment (preferably using `conda` or `mamba` so that it automatically resolves the environment and installs the neessary versions).
+```
+mamba install --yes --file environment.yml
+```
+We next need to install a package called `avni` for getting the B-splines
+```
+# Installing avni before installing magsplitpy
+mkdir <avni_installation_dir>
+cd <avni_installation_dir>
+curl --remote-name https://raw.githubusercontent.com/globalseismology/avni/main/requirements_base.txt
+mamba install --yes --channel=conda-forge --file requirements_base.txt
+git clone https://github.com/globalseismology/avni.git
+cd avni
 pip install -e .
 ```
-If you choose to not use `astero` and/or use your own patent environment, checkout the packages in the `environment.yml` file and install them manually in your environment (preferably using `conda` sso that it automatically resolves the environment and installs the neessary versions).
-
+Finally we install `magsplitpy` in the following lines
+```
+# Install magsplitpy
+cd <magplitpy_repo_dir>
+pip install -e .
+```
 The above steps essentially ensure that you can load `magsplitpy` as a package as follows
 ```
 # import the package
@@ -85,5 +103,39 @@ This is to test if the installation was successful and the user has `magsplitpy`
 You should see the following plot show up after the code has successfully finished running.
 
 ![Alt text](Figures/expected_splitting_plot.png)
+
+## Installing mamba
+It is recommended to install `mamba` in your `base` environment. While there is an option to install `mamba` from `conda-forge` using the usual conda installation as follows
+```
+conda install -c conda-forge mamba
+```
+I would recommend not installing it from `conda` (it didn't work for me since I was getting segmentation faults). Instead try to download the following shell script
+```
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
+```
+and run it as 
+```
+chmod 777 Mambaforge-Darwin-x86_64.sh
+./Mambaforge-Darwin-x86_64.sh
+```
+At this point check if the installation went through by checking
+```
+mamba --help
+```
+If it says that `mamba` not found, check where mamba was installed in your system. For me it was `/Users/srijanbharatidas/mambaforge/`. I will call this `<mambaforge_dir>` henceforth. Run the following shell script
+```
+. <mambaforge_dir>/etc/profile.d/mamba.sh
+```
+Note that there is a space between `.` and `<mambaforge_dir>`. Next you need to either roboot your terminal and/or re-run the `~/.bash_profile` file as follows
+```
+source ~/.bash_profile
+```
+At this point you should have `mamba` working, check again with the following command
+```
+mamba --help
+```
+If the above snippet works, then go back to `magsplitpy` installation above.
+
+
 
 
