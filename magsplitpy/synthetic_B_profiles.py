@@ -150,25 +150,21 @@ class synthetic_B:
                       simple magnetic field as proposed in Eqn.(D48) of Das et al 2020.
         """
 
-        match field_type:
-            case 'dipolar':
-                B, B_GSH_coefs = self.dipolar_B()
+        if (field_type == 'dipolar'):
+            B, B_GSH_coefs = self.dipolar_B()
+        elif(field_type == 'toroidal'):
+            B, B_GSH_coefs = self.toroidal_B()
+        elif(field_type == 'mixed'):
+            # building the toroidal and dipolar components individually
+            B1, B1_GSH_coefs = self.toroidal_B()
+            B2, B2_GSH_coefs = self.dipolar_B()
 
-            case 'toroidal':
-                B, B_GSH_coefs = self.toroidal_B()
-
-            case 'mixed':
-                # building the toroidal and dipolar components individually
-                B1, B1_GSH_coefs = self.toroidal_B()
-                B2, B2_GSH_coefs = self.dipolar_B()
-
-                # constructing the complete field from the toroidal and dipolar components
-                B = alpha * B1 + beta * B2
-                B_GSH_coefs = alpha * B1_GSH_coefs + beta * B2_GSH_coefs
-
-            case _: 
-                print('Not a valid field type.')
-                B, B_GSH_coefs = None, None
+            # constructing the complete field from the toroidal and dipolar components
+            B = alpha * B1 + beta * B2
+            B_GSH_coefs = alpha * B1_GSH_coefs + beta * B2_GSH_coefs
+        else:
+            print('Not a valid field type.')
+            B, B_GSH_coefs = None, None
 
         if(self.get_B_GSH):
             return B, B_GSH_coefs
