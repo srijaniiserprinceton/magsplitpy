@@ -4,9 +4,10 @@ channels:
   - conda-forge
   - anaconda
 dependencies:
-  - python=3.11
+  - python=3.9
   - numpy
   - scipy
+  - sympy
   - astropy
   - celerite
   - pandas
@@ -17,6 +18,7 @@ dependencies:
   - lightkurve
   - pip
   - pip:
+    - spherepy
     - sphinx
     - sphinx-rtd-theme
     - pytest
